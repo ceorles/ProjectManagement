@@ -1,0 +1,24 @@
+/* Admin-only screens. */
+
+.hours-list { display: flex; flex-direction: column; }
+
+.hours-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 58px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.hours-row:last-child { border-bottom: 0; }
+.hours-row .checkbox { min-width: 150px; }
+.hours-row__times { display: flex; align-items: center; gap: 10px; }
+.hours-row__times .input { width: 132px; min-height: 38px; }
+
+@media (max-width: 479px) {
+  .hours-row__times { width: 100%; }
+  .hours-row__times .input { flex: 1; width: auto; }
+}

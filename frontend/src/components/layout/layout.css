@@ -1,0 +1,450 @@
+/* The signed-in shell: sidebar, top bar, page area, splash screen. */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-shell__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0; /* lets wide children shrink instead of stretching the page */
+}
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 28px 32px 48px;
+}
+
+.page:focus { outline: none; }
+
+.skip-link {
+  position: fixed;
+  top: -60px;
+  left: 12px;
+  z-index: 300;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--yellow-500);
+  color: var(--blue-950);
+  font-weight: 600;
+}
+
+.skip-link:focus { top: 12px; }
+
+/* ── Logo ────────────────────────────────────────────────────────────────── */
+
+.logo { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.logo svg { flex: none; border-radius: 22%; }
+.logo__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.logo__name { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; color: var(--blue-900); }
+.logo__sub { font-size: var(--text-xs); color: var(--color-text-muted); }
+.logo--on-dark svg { box-shadow: 0 0 0 1px rgb(255 255 255 / 16%); }
+.logo--on-dark .logo__name { color: #fff; }
+.logo--on-dark .logo__sub { color: var(--blue-200); }
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: var(--sidebar-width);
+  height: 100vh;
+  height: 100dvh;
+  background: var(--blue-900);
+  color: var(--blue-100);
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: var(--topbar-height);
+  flex: none;
+  padding: 0 18px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+/* Only the drawer (tablet/phone) has a close button. */
+.sidebar__close {
+  display: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--blue-100);
+}
+
+.sidebar__close:hover { background: rgb(255 255 255 / 10%); }
+
+.sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 20%) transparent;
+}
+
+.sidebar__section + .sidebar__section { margin-top: 18px; }
+
+.sidebar__heading {
+  padding: 0 12px 6px;
+  color: var(--blue-300);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--blue-100);
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  transition: background var(--transition), color var(--transition);
+}
+
+.sidebar__link svg { flex: none; opacity: 0.85; }
+.sidebar__link:hover { background: rgb(255 255 255 / 8%); color: #fff; text-decoration: none; }
+
+.sidebar__link.is-active {
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* The yellow accent marks the current page. */
+.sidebar__link.is-active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--yellow-500);
+}
+
+.sidebar__link.is-active svg { color: var(--yellow-400); opacity: 1; }
+
+.sidebar__badge {
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--yellow-500);
+  color: var(--blue-950);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: center;
+}
+
+.sidebar__footer {
+  flex: none;
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.sidebar__user { display: flex; align-items: center; gap: 10px; padding: 8px 6px 4px 12px; }
+.sidebar__user-name { color: #fff; font-size: var(--text-sm); font-weight: 600; }
+.sidebar__user-role { color: var(--blue-300); font-size: var(--text-xs); }
+.avatar--on-dark { background: var(--yellow-500); color: var(--blue-950); }
+
+.sidebar__logout {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--blue-200);
+  transition: background var(--transition), color var(--transition);
+}
+
+.sidebar__logout:hover { background: rgb(255 255 255 / 10%); color: #fff; }
+
+.sidebar-overlay { display: none; }
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--topbar-height);
+  flex: none;
+  padding: 0 24px;
+  background: rgb(255 255 255 / 92%);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+}
+
+.topbar__spacer { flex: 1; }
+
+/* The hamburger and the compact logo belong to the tablet/phone layout only. */
+.topbar__menu,
+.topbar__brand { display: none; }
+
+.topbar__bell { position: relative; }
+
+.topbar__bell-count {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: var(--radius-pill);
+  background: var(--yellow-500);
+  color: var(--blue-950);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+  box-sizing: content-box;
+}
+
+.library-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.library-status__dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--gray-400); }
+.library-status__detail { font-weight: 400; color: var(--color-text-muted); }
+.library-status--open { background: var(--green-50); color: var(--green-700); }
+.library-status--open .library-status__dot { background: var(--green-600); }
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 8px 4px 4px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  transition: background var(--transition);
+}
+
+.user-menu:hover { background: var(--gray-100); }
+.user-menu__text { display: flex; flex-direction: column; max-width: 170px; text-align: left; line-height: 1.2; }
+.user-menu__name { font-size: var(--text-sm); font-weight: 600; }
+.user-menu__role { font-size: var(--text-xs); color: var(--color-text-muted); }
+.user-menu__chevron { color: var(--gray-500); }
+
+/* ── Popovers (notifications, user menu) ─────────────────────────────────── */
+
+.popover-anchor { position: relative; }
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 240px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+  animation: rise-in 140ms ease;
+  overflow: hidden;
+}
+
+.popover--notifications { width: 360px; }
+
+.popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.popover__header h2 { font-size: var(--text-base); }
+.popover__list { max-height: min(400px, 60vh); overflow-y: auto; }
+.popover__list > li + li { border-top: 1px solid var(--color-border); }
+
+.popover__footer {
+  display: block;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--gray-50);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+}
+
+.popover__identity { padding: 14px 16px; border-bottom: 1px solid var(--color-border); }
+
+.popover__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--gray-800);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: left;
+}
+
+.popover__item:hover { background: var(--gray-50); text-decoration: none; }
+
+.notification-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  transition: background var(--transition);
+}
+
+.notification-row:hover { background: var(--gray-50); }
+.notification-row.is-unread { background: var(--blue-50); }
+.notification-row.is-unread:hover { background: var(--blue-100); }
+.notification-row__dot { width: 8px; height: 8px; margin-top: 6px; flex: none; border-radius: 50%; background: var(--blue-500); }
+.notification-row__dot--success { background: var(--green-600); }
+.notification-row__dot--warning { background: var(--yellow-500); }
+.notification-row__dot--danger { background: var(--red-600); }
+.notification-row__title { display: block; font-size: var(--text-sm); font-weight: 600; color: var(--gray-900); }
+.notification-row__message { display: block; font-size: var(--text-sm); color: var(--color-text-soft); overflow-wrap: anywhere; }
+.notification-row__time { display: block; margin-top: 2px; font-size: var(--text-xs); color: var(--color-text-muted); }
+
+/* A notification with its delete button (notifications page). */
+.notification-item { display: flex; align-items: center; gap: 4px; padding-right: 10px; }
+.notification-item .notification-row { flex: 1; min-width: 0; }
+
+/* ── Offline banner ──────────────────────────────────────────────────────── */
+
+.offline-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 24px;
+  background: var(--yellow-100);
+  border-bottom: 1px solid var(--yellow-200);
+  color: var(--yellow-700);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.offline-banner svg { flex: none; margin-top: 2px; }
+
+/* ── Splash / full-screen states ─────────────────────────────────────────── */
+
+.splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px;
+  text-align: center;
+}
+
+.splash svg:first-child { border-radius: 22%; }
+.splash__spinner { color: var(--color-primary); }
+.splash__title { font-size: var(--text-xl); }
+.splash__text { max-width: 46ch; }
+
+/* ── Tablet and phone: the sidebar becomes a drawer ──────────────────────── */
+
+@media (max-width: 1023px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 90;
+    width: min(var(--sidebar-width), 86vw);
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+    box-shadow: none;
+    /* Not reachable by keyboard or screen reader while it is off-screen. */
+    visibility: hidden;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar__close { display: grid; }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgb(8 27 69 / 50%);
+    animation: fade-in 180ms ease;
+  }
+
+  .topbar { padding: 0 12px 0 8px; }
+  .topbar__menu { display: inline-grid; }
+  .topbar__brand { display: block; margin-right: 4px; }
+  .topbar__brand svg { border-radius: 22%; }
+  .page { padding: 20px 20px 40px; }
+  .offline-banner { padding: 10px 20px; }
+}
+
+@media (max-width: 639px) {
+  .page { padding: 16px 16px calc(32px + env(safe-area-inset-bottom)); }
+  .offline-banner { padding: 10px 16px; }
+  .user-menu { padding: 4px; }
+  .user-menu__text, .user-menu__chevron { display: none; }
+  .library-status { padding: 5px 10px; }
+  .library-status__detail { display: none; }
+
+  /* Popovers span the screen width instead of hanging off its edge. */
+  .popover--notifications {
+    position: fixed;
+    top: calc(var(--topbar-height) + 6px);
+    right: 8px;
+    left: 8px;
+    width: auto;
+  }
+}

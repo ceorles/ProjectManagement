@@ -1,0 +1,11 @@
+# Backend dependencies for the Library Seat & Study Room Reservation Portal.
+# Install with:  pip install -r requirements.txt
+
+Django>=6.1,<6.2
+djangorestframework>=3.18,<3.19
+djangorestframework-simplejwt>=5.5,<5.6
+django-cors-headers>=4.9,<5.0
+python-dotenv>=1.2,<2.0
+
+# Windows does not ship the IANA time zone database; Django needs it there.
+tzdata>=2026.1; sys_platform == "win32"

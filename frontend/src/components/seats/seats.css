@@ -1,0 +1,161 @@
+/* Seat map, legend and the seat management screen. */
+
+.seat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: var(--gray-700);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.filter-chip:hover { border-color: var(--gray-400); }
+.filter-chip.is-active { border-color: var(--blue-600); background: var(--blue-50); color: var(--blue-800); }
+
+.seat-zones { padding: 16px 20px 20px; }
+.seat-zones__notice { margin-bottom: 14px; }
+
+.seat-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-bottom: 16px;
+}
+
+.seat-zone { padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--gray-50); }
+.seat-zone + .seat-zone { margin-top: 16px; }
+
+.seat-zone__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.seat-zone__header h3 { font-size: var(--text-base); }
+
+/*
+ * The grid sizes its seats from the width it is given (container query
+ * units), so a zone with many columns still fits a phone screen. Only if the
+ * seats would become too small to tap does the map scroll inside its own box.
+ */
+.seat-map {
+  container-type: inline-size;
+  overflow-x: auto;
+  padding: 4px;
+  margin: -4px;
+  scrollbar-width: thin;
+}
+
+.seat-map__grid {
+  --gap: clamp(4px, 1cqi, 8px);
+  --seat: clamp(26px, calc((100cqi - 8px - (var(--cols) - 1) * var(--gap)) / var(--cols)), 46px);
+  display: grid;
+  /* Tracks are set inline by SeatMap: aisles are narrower than seats. */
+  gap: var(--gap);
+  width: max-content;
+  margin: 0 auto;
+}
+
+.seat {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 1.5px solid var(--green-600);
+  border-radius: 8px 8px 5px 5px; /* slightly rounded top: reads as a chair */
+  background: #fff;
+  color: var(--green-700);
+  transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+}
+
+.seat__number {
+  font-size: clamp(0.5625rem, 2.1cqi, 0.6875rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.seat__icon {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  padding: 2px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.seat--available:hover { background: var(--green-50); transform: translateY(-1px); box-shadow: var(--shadow); }
+
+.seat--reserved { border-color: var(--yellow-600); background: var(--yellow-200); color: var(--yellow-700); }
+.seat--occupied { border-color: var(--blue-800); background: var(--blue-800); color: #fff; }
+.seat--occupied .seat__icon { color: var(--blue-800); }
+.seat--mine { border-color: var(--blue-600); background: var(--blue-100); color: var(--blue-800); box-shadow: 0 0 0 2px var(--yellow-500); }
+
+.seat--unavailable {
+  border-color: var(--gray-300);
+  border-style: dashed;
+  background: repeating-linear-gradient(135deg, var(--gray-100) 0 5px, var(--gray-200) 5px 10px);
+  color: var(--gray-500);
+}
+
+.seat.is-selected { outline: 3px solid var(--blue-500); outline-offset: 2px; }
+.seat.is-dimmed { opacity: 0.28; }
+
+/* Legend swatches reuse the seat styles at a fixed size. */
+.seat-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--text-sm); color: var(--gray-700); }
+.seat-legend li { display: inline-flex; align-items: center; gap: 8px; }
+.seat--swatch { width: 22px; height: 22px; flex: none; pointer-events: none; }
+.seat--swatch .seat__icon { width: 12px; height: 12px; top: -4px; right: -4px; }
+
+@media (max-width: 639px) {
+  .seat-toolbar { padding: 12px 16px; }
+  .seat-zones { padding: 12px; }
+  .seat-zone { padding: 12px; }
+  .seat__icon { width: 12px; height: 12px; top: -4px; right: -4px; }
+}
+
+/* ── Management screen ───────────────────────────────────────────────────── */
+
+.zone-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+
+.zone-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #fff;
+  text-align: left;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.zone-card:hover { border-color: var(--blue-300); }
+.zone-card.is-active { border-color: var(--blue-600); box-shadow: 0 0 0 3px var(--blue-100); }
