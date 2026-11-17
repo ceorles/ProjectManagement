@@ -176,7 +176,8 @@ class ManagedUserSerializer(serializers.ModelSerializer):
 
         if role == User.Role.STUDENT and not student_id:
             raise serializers.ValidationError({'student_id': 'Students need a student ID.'})
-        if role != User.Role.STUDENT:
+        # Student Assistants are students too, so they keep their student details.
+        if role not in (User.Role.STUDENT, User.Role.ASSISTANT):
             attrs['student_id'] = None
             attrs['program'] = ''
             attrs['year_level'] = None

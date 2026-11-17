@@ -7,7 +7,9 @@ import { ToastProvider } from './context/ToastProvider'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import NotFoundPage from './pages/shared/NotFoundPage'
-import { canManageResources, isAdmin, isStaff, isStudent } from './utils/roles'
+import {
+  canManageReservations, canManageResources, isAdmin, isStaff, isStudent,
+} from './utils/roles'
 
 // Pages behind the login are loaded on demand, which keeps the first load
 // small on phones. <AppLayout> shows a loading state while one is fetched.
@@ -23,7 +25,6 @@ const CheckInDeskPage = lazy(() => import('./pages/librarian/CheckInDeskPage'))
 const ManageReservationsPage = lazy(() => import('./pages/librarian/ManageReservationsPage'))
 const ReportsPage = lazy(() => import('./pages/librarian/ReportsPage'))
 const ManageSeatsPage = lazy(() => import('./pages/librarian/ManageSeatsPage'))
-const ManageRoomsPage = lazy(() => import('./pages/librarian/ManageRoomsPage'))
 const UsersPage = lazy(() => import('./pages/admin/UsersPage'))
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'))
 const ActivityLogPage = lazy(() => import('./pages/admin/ActivityLogPage'))
@@ -62,17 +63,20 @@ export default function App() {
                 <Route path="/reservations" element={<MyReservationsPage />} />
               </Route>
 
-              {/* Librarians and admins */}
+              {/* Librarians, admins and student assistants */}
               <Route element={<RequireRole allow={isStaff} />}>
                 <Route path="/desk" element={<CheckInDeskPage />} />
                 <Route path="/manage/reservations" element={<ManageReservationsPage />} />
+              </Route>
+
+              {/* Librarians and admins only */}
+              <Route element={<RequireRole allow={canManageReservations} />}>
                 <Route path="/reports" element={<ReportsPage />} />
               </Route>
 
               {/* Admins, and librarians the admin has allowed */}
               <Route element={<RequireRole allow={canManageResources} />}>
                 <Route path="/manage/seats" element={<ManageSeatsPage />} />
-                <Route path="/manage/rooms" element={<ManageRoomsPage />} />
               </Route>
 
               <Route element={<RequireRole allow={isAdmin} />}>

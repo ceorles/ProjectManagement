@@ -95,8 +95,9 @@ export default function ReportsPage() {
                   {[
                     ['Completed', totals.completed, `${totals.completion_rate}%`],
                     ['Cancelled', totals.cancelled, `${totals.cancellation_rate}%`],
+                    ['Rejected', totals.rejected, 'Not approved by the librarian'],
                     ['No-show', totals.no_show, `${totals.no_show_rate}%`],
-                    ['Still active', totals.confirmed + totals.checked_in, 'Confirmed or checked in'],
+                    ['Still active', totals.pending + totals.confirmed + totals.checked_in, 'Pending, confirmed or checked in'],
                   ].map(([label, value, hint]) => (
                     <div key={label} className="rate">
                       <p className="rate__value">{value}</p>

@@ -39,10 +39,10 @@ export default function RoomsPage() {
   return (
     <>
       <PageHeader
-        title="Study Rooms"
+        title="Study Room"
         description={isStaff
-          ? 'Live view of every study room. Open a room to see its schedule or reserve it for a student.'
-          : 'Choose when your group wants to meet, then pick a room that is free.'}
+          ? 'Live view of the study room. Open it to see its schedule.'
+          : 'Choose when your group wants to meet, then request the room if it is free.'}
       />
 
       <Card title="When do you need a room?" icon={DoorOpen}>
@@ -50,11 +50,13 @@ export default function RoomsPage() {
       </Card>
 
       <div className="room-filters">
-        <select className="input select" aria-label="Floor" value={floor}
-          onChange={(event) => filters.setField('floor', event.target.value)}>
-          <option value="">All floors</option>
-          {floors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
+        {floors.length > 1 && (
+          <select className="input select" aria-label="Floor" value={floor}
+            onChange={(event) => filters.setField('floor', event.target.value)}>
+            <option value="">All floors</option>
+            {floors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        )}
         <select className="input select" aria-label="Group size" value={people}
           onChange={(event) => filters.setField('people', event.target.value)}>
           <option value="">Any group size</option>

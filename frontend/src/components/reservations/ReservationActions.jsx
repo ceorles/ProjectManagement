@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Ban, LogIn, LogOut, UserX } from 'lucide-react'
+import { Ban, Check, LogIn, LogOut, UserX, X } from 'lucide-react'
 import { useAction } from '../../hooks/useAction'
 import { useAuth } from '../../hooks/useAuth'
 import { reservationService } from '../../services'
@@ -9,13 +9,14 @@ import { TextAreaField } from '../common/FormControls'
 import Modal from '../common/Modal'
 
 /**
- * The buttons for whatever may be done to a reservation right now: check in,
- * check out, cancel, mark as no-show. Which ones appear comes from the
- * `can_*` flags the server sends, and the server checks again on every click.
+ * The buttons for whatever may be done to a reservation right now: approve,
+ * reject, check in, check out, cancel, mark as no-show. Which ones appear
+ * comes from the `can_*` flags the server sends, and the server checks again
+ * on every click.
  */
 export default function ReservationActions({ reservation, onChanged, size = 'sm' }) {
   const { isStaff } = useAuth()
-  const [dialog, setDialog] = useState(null) // 'cancel' | 'check-out' | 'no-show'
+  const [dialog, setDialog] = useState(null) // 'reject' | 'cancel' | 'check-out' | 'no-show'
   const [reason, setReason] = useState('')
   const close = () => setDialog(null)
   const done = (updated) => {
@@ -29,10 +30,17 @@ export default function ReservationActions({ reservation, onChanged, size = 'sm'
     close()
     onChanged?.(null)
   }
-  const { id, resource } = reservation
+  const { id, resource, student } = reservation
 
+  const [approve, approving] = useAction(() => reservationService.approve(id), {
+    success: `Approved. ${student.full_name} has been notified.`, onSuccess: done, onError,
+  })
+  const [reject, rejecting] = useAction(() => reservationService.reject(id, reason.trim()), {
+    success: `Rejected. ${student.full_name} has been notified and the places are free again.`,
+    onSuccess: done, onError,
+  })
   const [checkIn, checkingIn] = useAction(() => reservationService.checkIn(id), {
-    success: isStaff ? `${reservation.student.full_name} is checked in.` : 'You are checked in. Enjoy your study session!',
+    success: isStaff ? `${student.full_name} is checked in.` : 'You are checked in. Enjoy your study session!',
     onSuccess: done, onError,
   })
   const [checkOut, checkingOut] = useAction(() => reservationService.checkOut(id), {
@@ -45,11 +53,20 @@ export default function ReservationActions({ reservation, onChanged, size = 'sm'
     success: 'Marked as a no-show. The place is available again.', onSuccess: done, onError,
   })
 
-  const { can_check_in, can_check_out, can_cancel, can_mark_no_show } = reservation
-  if (!can_check_in && !can_check_out && !can_cancel && !can_mark_no_show) return null
+  const { can_approve, can_check_in, can_check_out, can_cancel, can_mark_no_show } = reservation
+  if (!can_approve && !can_check_in && !can_check_out && !can_cancel && !can_mark_no_show) return null
+  const pending = reservation.status === 'pending'
 
   return (
     <>
+      {can_approve && (
+        <>
+          <Button size={size} icon={Check} loading={approving} onClick={approve}>Approve</Button>
+          <Button size={size} variant="danger-soft" icon={X} onClick={() => setDialog('reject')}>
+            Reject
+          </Button>
+        </>
+      )}
       {can_check_in && (
         <Button size={size} icon={LogIn} loading={checkingIn} onClick={checkIn}>Check in</Button>
       )}
@@ -63,19 +80,43 @@ export default function ReservationActions({ reservation, onChanged, size = 'sm'
           No-show
         </Button>
       )}
-      {can_cancel && (
+      {can_cancel && !can_approve && (
         <Button size={size} variant="danger-soft" icon={Ban} onClick={() => setDialog('cancel')}>
-          Cancel
+          {pending ? 'Withdraw' : 'Cancel'}
         </Button>
       )}
 
       <Modal
+        open={dialog === 'reject'} onClose={close} busy={rejecting} size="sm"
+        title="Reject this request?"
+        footer={(
+          <>
+            <Button variant="secondary" onClick={close} disabled={rejecting}>Go back</Button>
+            <Button variant="danger" onClick={reject} loading={rejecting}>Reject request</Button>
+          </>
+        )}
+      >
+        <div className="stack">
+          <p className="soft">
+            <strong>{student.full_name}</strong>&apos;s request for <strong>{resource.name}</strong> will
+            be rejected and the places released for other students. The student is notified.
+          </p>
+          <TextAreaField
+            label="Reason (shown to the student)" rows={2} maxLength={200}
+            value={reason} onChange={(event) => setReason(event.target.value)}
+          />
+        </div>
+      </Modal>
+
+      <Modal
         open={dialog === 'cancel'} onClose={close} busy={cancelling} size="sm"
-        title="Cancel this reservation?"
+        title={pending ? 'Withdraw this request?' : 'Cancel this reservation?'}
         footer={(
           <>
             <Button variant="secondary" onClick={close} disabled={cancelling}>Keep it</Button>
-            <Button variant="danger" onClick={cancel} loading={cancelling}>Cancel reservation</Button>
+            <Button variant="danger" onClick={cancel} loading={cancelling}>
+              {pending ? 'Withdraw request' : 'Cancel reservation'}
+            </Button>
           </>
         )}
       >
@@ -106,8 +147,8 @@ export default function ReservationActions({ reservation, onChanged, size = 'sm'
         title="Mark as no-show?" confirmLabel="Mark no-show"
       >
         <p>
-          <strong>{reservation.student.full_name}</strong> has not arrived for <strong>{resource.name}</strong>.
-          The place will be released and a missed reservation recorded on the student's account.
+          <strong>{student.full_name}</strong> has not arrived for <strong>{resource.name}</strong>.
+          The place will be released and a missed reservation recorded on the student&apos;s account.
         </p>
       </ConfirmDialog>
     </>

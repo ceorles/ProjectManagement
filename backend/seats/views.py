@@ -22,7 +22,8 @@ class ZoneViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        queryset = Zone.objects.select_related('floor').annotate(seat_count=Count('seats'))
+        queryset = Zone.objects.select_related('floor').annotate(
+            seat_count=Count('seats', filter=Q(seats__is_archived=False)))
         floor = self.request.query_params.get('floor')
         if floor:
             queryset = queryset.filter(floor_id=floor)

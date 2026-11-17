@@ -9,11 +9,13 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from config.exceptions import ApiError
-from config.permissions import IsLibraryStaff
+from config.permissions import IsLibraryStaff, IsReservationManager
 
 from . import services
 from .models import Reservation
-from .serializers import CancelSerializer, ReservationCreateSerializer, ReservationSerializer
+from .serializers import (
+    CancelSerializer, RejectSerializer, ReservationCreateSerializer, ReservationSerializer,
+)
 from .windows import build_window, to_datetime
 
 Status = Reservation.Status
@@ -33,8 +35,9 @@ class ReservationViewSet(
         user = self.request.user
         queryset = (
             Reservation.objects
-            .select_related('student', 'seat__zone__floor', 'room__floor', 'created_by')
-            .prefetch_related('participants__student')
+            .select_related('student', 'seat__zone__floor', 'room__floor', 'created_by',
+                            'decided_by')
+            .prefetch_related('participants__student', 'reservation_seats__seat__zone__floor')
         )
         if not user.is_library_staff:
             queryset = queryset.filter(
@@ -83,10 +86,10 @@ class ReservationViewSet(
                     | Q(student__last_name__icontains=search)
                     | Q(student__student_id__icontains=search)
                     | Q(student__email__icontains=search)
-                    | Q(seat__number__icontains=search)
+                    | Q(reservation_seats__seat__number__icontains=search)
                     | Q(room__name__icontains=search)
                     | Q(room__code__icontains=search)
-                )
+                ).distinct()
 
         ordering = params.get('ordering')
         if ordering in ('start_at', '-start_at', 'created_at', '-created_at'):
@@ -106,6 +109,7 @@ class ReservationViewSet(
             student=data['student_user'],
             resource_type=data['resource_type'],
             resource_id=data['resource_id'],
+            seat_ids=data['seat_ids'],
             window=build_window(data['date'], data['start_time'], data['end_time']),
             participant_count=data['participant_count'],
             purpose=data['purpose'],
@@ -113,6 +117,23 @@ class ReservationViewSet(
             request=request,
         )
         return self._respond(reservation, status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsReservationManager])
+    def approve(self, request, pk=None):
+        """Librarian/admin: accept a pending request. Pending -> Confirmed."""
+        reservation = self.get_object()
+        services.approve_reservation(reservation, actor=request.user)
+        return self._respond(reservation)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsReservationManager])
+    def reject(self, request, pk=None):
+        """Librarian/admin: decline a pending request. Pending -> Rejected."""
+        reservation = self.get_object()
+        serializer = RejectSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.reject_reservation(
+            reservation, actor=request.user, reason=serializer.validated_data['reason'])
+        return self._respond(reservation)
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -136,7 +157,7 @@ class ReservationViewSet(
         return self._respond(reservation)
 
     @action(detail=True, methods=['post'], url_path='no-show',
-            permission_classes=[IsLibraryStaff])
+            permission_classes=[IsReservationManager])
     def no_show(self, request, pk=None):
         reservation = self.get_object()
         services.mark_no_show(reservation, actor=request.user)

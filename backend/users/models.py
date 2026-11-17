@@ -42,6 +42,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = 'admin', 'Admin'
         LIBRARIAN = 'librarian', 'Librarian'
+        ASSISTANT = 'assistant', 'Student Assistant'
         STUDENT = 'student', 'Student'
 
     username = None
@@ -100,7 +101,21 @@ class User(AbstractUser):
         return self.role == self.Role.STUDENT
 
     @property
+    def is_assistant(self):
+        return self.role == self.Role.ASSISTANT
+
+    @property
     def is_library_staff(self):
+        """Everyone who works the library floor, including Student Assistants."""
+        return self.role in (self.Role.ADMIN, self.Role.LIBRARIAN, self.Role.ASSISTANT)
+
+    @property
+    def can_manage_reservations(self):
+        """
+        May decide on reservations: approve, reject, cancel for a student,
+        book on a student's behalf, record a no-show. Student Assistants help
+        with daily operations but do not make these decisions.
+        """
         return self.role in (self.Role.ADMIN, self.Role.LIBRARIAN)
 
     @property

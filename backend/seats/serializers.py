@@ -54,7 +54,7 @@ class SeatSerializer(serializers.ModelSerializer):
         model = Seat
         fields = [
             'id', 'number', 'zone', 'zone_name', 'floor', 'floor_name', 'row', 'col',
-            'has_power_outlet', 'has_computer', 'near_window', 'is_accessible',
+            'table_number', 'has_power_outlet', 'has_computer', 'is_accessible',
             'status', 'status_label', 'status_note', 'created_at', 'updated_at',
         ]
         # Status changes go through the set-status action so that affected
@@ -64,7 +64,8 @@ class SeatSerializer(serializers.ModelSerializer):
 
     def validate_number(self, value):
         number = value.strip().upper()
-        duplicate = Seat.objects.filter(number__iexact=number)
+        # Retired seats keep their numbers, so they are checked as well.
+        duplicate = Seat.all_objects.filter(number__iexact=number)
         if self.instance:
             duplicate = duplicate.exclude(pk=self.instance.pk)
         if duplicate.exists():

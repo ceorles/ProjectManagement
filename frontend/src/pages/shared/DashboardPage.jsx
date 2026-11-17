@@ -7,6 +7,8 @@ import StudentDashboard from '../student/StudentDashboard'
 export default function DashboardPage() {
   const { user } = useAuth()
   if (user.role === 'admin') return <AdminDashboard />
-  if (user.role === 'librarian') return <LibrarianDashboard />
+  // Student assistants share the librarian's operations view (without the
+  // approve/reject buttons, which the server only offers to librarians).
+  if (user.role === 'librarian' || user.role === 'assistant') return <LibrarianDashboard />
   return <StudentDashboard />
 }

@@ -27,9 +27,10 @@ const ROLE_TABS = [
   { value: '', label: 'Everyone' },
   { value: 'student', label: 'Students' },
   { value: 'librarian', label: 'Librarians' },
+  { value: 'assistant', label: 'Assistants' },
   { value: 'admin', label: 'Admins' },
 ]
-const ROLE_TONE = { admin: 'blue', librarian: 'yellow', student: 'gray' }
+const ROLE_TONE = { admin: 'blue', librarian: 'yellow', assistant: 'green', student: 'gray' }
 const EMPTY = {
   role: 'librarian', first_name: '', last_name: '', email: '', phone: '',
   student_id: '', program: '', year_level: '', can_manage_resources: false,
@@ -71,7 +72,8 @@ function UserFormModal({ account, defaultRole, onClose, onSaved }) {
     onChange: (event) => setField(name, event.target.value),
   })
   const cancel = () => { clearDraft(); onClose() }
-  const isStudent = values.role === 'student'
+  // Student assistants are students who help in the library.
+  const isStudent = values.role === 'student' || values.role === 'assistant'
 
   return (
     <Modal
@@ -91,8 +93,9 @@ function UserFormModal({ account, defaultRole, onClose, onSaved }) {
         <FormError className="span-2" error={error?.fields ? null : error} />
         <SelectField label="Role" className="span-2" disabled={editing && account.id === me.id}
           hint={editing && account.id === me.id ? 'You cannot change your own role.' : undefined} {...bind('role')}>
-          <option value="librarian">Librarian - runs daily operations</option>
-          <option value="student">Student - reserves seats and rooms</option>
+          <option value="librarian">Librarian - approves reservations, runs daily operations</option>
+          <option value="assistant">Student Assistant - helps with check-ins and monitoring</option>
+          <option value="student">Student - requests seats, tables and computers</option>
           <option value="admin">Admin - full access</option>
         </SelectField>
         <TextField label="First name" required {...bind('first_name')} />
@@ -101,7 +104,7 @@ function UserFormModal({ account, defaultRole, onClose, onSaved }) {
         <TextField label="Mobile number" type="tel" {...bind('phone')} />
         {isStudent && (
           <>
-            <TextField label="Student ID" required {...bind('student_id')} />
+            <TextField label="Student ID" required={values.role === 'student'} {...bind('student_id')} />
             <SelectField label="Year level" {...bind('year_level')}>
               <option value="">Not set</option>
               {[1, 2, 3, 4, 5, 6].map((year) => <option key={year} value={year}>Year {year}</option>)}
@@ -245,7 +248,7 @@ export default function UsersPage() {
     <>
       <PageHeader
         title="Users"
-        description="Create librarian accounts, manage students, and control who can sign in."
+        description="Create librarian and student assistant accounts, manage students, and control who can sign in."
         actions={<Button icon={UserPlus} onClick={() => setDialog({ type: 'form' })}>Create account</Button>}
       />
 

@@ -1,4 +1,4 @@
-import { Armchair, DoorOpen, Info } from 'lucide-react'
+import { Armchair, DoorOpen, Info, Monitor } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { StatusBadge } from '../../components/common/Badge'
 import Card from '../../components/common/Card'
@@ -19,6 +19,15 @@ import {
 function statusMessage(reservation, timeZone, isStaff) {
   const who = isStaff ? 'The student' : 'You'
   switch (reservation.status) {
+    case 'pending':
+      if (reservation.can_approve) return 'This request is waiting for your decision: approve or reject it.'
+      return isStaff
+        ? 'This request is waiting for the librarian\'s decision.'
+        : 'Waiting for the librarian\'s approval. You will be notified when it is approved or rejected. The places are held for you until then.'
+    case 'rejected':
+      return reservation.decision_note
+        ? `This request was not approved. Reason: ${reservation.decision_note}`
+        : 'This request was not approved by the librarian.'
     case 'confirmed':
       if (reservation.can_check_in) {
         return `Check-in is open until ${formatClock(reservation.checkin_deadline, timeZone)}. After that the reservation is released.`
@@ -42,7 +51,10 @@ function statusMessage(reservation, timeZone, isStaff) {
 function events(reservation, timeZone) {
   const at = (iso) => formatTimestamp(iso, timeZone)
   return [
-    { tone: 'blue', label: reservation.booked_by_staff ? 'Reserved by library staff' : 'Reserved', time: at(reservation.created_at) },
+    { tone: 'blue', label: reservation.booked_by_staff ? 'Reserved by library staff' : 'Request submitted', time: at(reservation.created_at) },
+    reservation.decided_at && !reservation.booked_by_staff && (reservation.status === 'rejected'
+      ? { tone: 'red', label: `Rejected by ${reservation.decided_by_name || 'the librarian'}`, time: at(reservation.decided_at) }
+      : { tone: 'green', label: `Approved by ${reservation.decided_by_name || 'the librarian'}`, time: at(reservation.decided_at) }),
     reservation.checked_in_at && { tone: 'green', label: 'Checked in', time: at(reservation.checked_in_at) },
     reservation.checked_out_at && { tone: 'gray', label: 'Checked out', time: at(reservation.checked_out_at) },
     reservation.cancelled_at && { tone: 'red', label: 'Cancelled', time: at(reservation.cancelled_at) },
@@ -71,7 +83,9 @@ export default function ReservationDetailPage() {
       {(reservation) => {
         const { resource, student } = reservation
         const live = reservation.status === 'confirmed' || reservation.status === 'checked_in'
-        const Icon = resource.type === 'seat' ? Armchair : DoorOpen
+        const Icon = resource.type === 'room' ? DoorOpen : resource.is_computer ? Monitor : Armchair
+        const seatNumbers = reservation.seats.map((seat) => seat.number).join(', ')
+        const declined = ['no_show', 'cancelled', 'rejected', 'pending'].includes(reservation.status)
         return (
           <>
             <PageHeader
@@ -100,7 +114,7 @@ export default function ReservationDetailPage() {
                       </div>
                       <StatusBadge status={reservation.status} />
                     </div>
-                    <p className={`notice ${reservation.status === 'no_show' || reservation.status === 'cancelled' ? 'notice--warning' : ''}`}>
+                    <p className={`notice ${declined ? 'notice--warning' : ''}`}>
                       <Info size={16} aria-hidden="true" />
                       <span>{statusMessage(reservation, timeZone, isStaff)}</span>
                     </p>
@@ -109,10 +123,19 @@ export default function ReservationDetailPage() {
 
                 <Card title="Details">
                   <dl className="details">
-                    <Detail label={resource.type === 'seat' ? 'Seat' : 'Room'}>
-                      {resource.name}{resource.type === 'room' && ` (${resource.code})`}
-                    </Detail>
+                    {resource.type === 'room' ? (
+                      <Detail label="Room">{resource.name} ({resource.code})</Detail>
+                    ) : (
+                      <Detail label={resource.is_computer ? 'Computer' : resource.seat_count > 1 ? 'Seats requested' : 'Seat'}
+                        wide={resource.seat_count > 2}>
+                        {resource.seat_count > 1 ? `${resource.name}: ${seatNumbers}` : resource.name}
+                      </Detail>
+                    )}
+                    {resource.type === 'seat' && (
+                      <Detail label="Number of seats">{resource.seat_count}</Detail>
+                    )}
                     <Detail label="Location">{resource.location}</Detail>
+                    <Detail label="Submitted">{formatTimestamp(reservation.created_at, timeZone)}</Detail>
                     <Detail label="Reserved for">
                       {student.full_name}
                       {student.student_id && <span className="muted"> · {student.student_id}</span>}
@@ -122,7 +145,11 @@ export default function ReservationDetailPage() {
                     {resource.type === 'room' && (
                       <Detail label="People">{reservation.participant_count} of {resource.capacity}</Detail>
                     )}
-                    {reservation.purpose && <Detail label="Purpose" wide>{reservation.purpose}</Detail>}
+                    {reservation.purpose && (
+                      <Detail label={resource.type === 'seat' ? 'Reason for the request' : 'Purpose'} wide>
+                        {reservation.purpose}
+                      </Detail>
+                    )}
                     {reservation.participants.length > 0 && (
                       <Detail label="Invited classmates" wide>
                         {reservation.participants.map((person) => person.full_name).join(', ')}

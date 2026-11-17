@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -149,8 +149,10 @@ class FloorViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Floor.objects.annotate(
-            seat_count=Count('zones__seats', distinct=True),
-            room_count=Count('study_rooms', distinct=True),
+            seat_count=Count('zones__seats', distinct=True,
+                             filter=Q(zones__seats__is_archived=False)),
+            room_count=Count('study_rooms', distinct=True,
+                             filter=Q(study_rooms__is_archived=False)),
         )
 
     def perform_create(self, serializer):

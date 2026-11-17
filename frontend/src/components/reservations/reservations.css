@@ -62,6 +62,7 @@
 }
 
 .timeline__block { position: absolute; top: 0; bottom: 0; }
+.timeline__block--pending { background: var(--yellow-200); }
 .timeline__block--confirmed { background: var(--yellow-400); }
 .timeline__block--checked_in { background: var(--blue-800); }
 .timeline__block--mine { background: var(--blue-500); }
@@ -137,6 +138,7 @@
 
 .booking-success__head { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .booking-success__head svg { color: var(--green-600); }
+.booking-success__head--pending svg { color: var(--yellow-600); }
 .booking-success__head h3 { font-size: var(--text-xl); }
 .booking-summary { padding: 14px 16px; border-radius: var(--radius); background: var(--gray-50); border: 1px solid var(--color-border); }
 
@@ -159,6 +161,8 @@
   box-shadow: var(--shadow-sm);
 }
 
+.reservation-card--pending { border-left-color: var(--yellow-500); }
+.reservation-card--rejected { border-left-color: var(--red-200); }
 .reservation-card--checked_in { border-left-color: var(--green-600); }
 .reservation-card--completed { border-left-color: var(--gray-300); }
 .reservation-card--cancelled { border-left-color: var(--red-200); }
@@ -190,6 +194,7 @@
 
 .reservation-card__meta li { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .reservation-card__meta svg { flex: none; color: var(--gray-400); }
+.reservation-card__reason { flex-basis: 100%; }
 .reservation-card__actions { display: flex; flex-wrap: wrap; gap: 8px; flex: 0 1 auto; }
 
 /* ── Reservation detail ──────────────────────────────────────────────────── */

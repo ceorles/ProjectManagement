@@ -32,7 +32,7 @@ function overlaps(block, start, end) {
 }
 
 function BookingForm({ room, booking, schedule, onBooked }) {
-  const { user, isStaff } = useAuth()
+  const { user, isStaff, canManageReservations } = useAuth()
   const online = useOnlineStatus()
   const { window, setWindow, end, bookable } = booking
   // What has been typed for this room is kept if the page is refreshed.
@@ -48,14 +48,14 @@ function BookingForm({ room, booking, schedule, onBooked }) {
   const people = Math.min(Math.max(values.participant_count ?? minimum, minimum), room.capacity)
   const taken = bookable && schedule?.blocks.some((block) => overlaps(block, window.start, end))
   const inService = room.status === 'active'
-  const ready = bookable && inService && !taken && online && (!isStaff || values.student)
+  const ready = bookable && inService && !taken && online && (!canManageReservations || values.student)
 
   const [reserve, reserving] = useAction(
     () => reservationService.create({
       resource_type: 'room', room: room.id, date: window.date, start_time: window.start,
       end_time: end, participant_count: people, purpose: values.purpose.trim(),
       participant_student_ids: values.invitees.map((person) => person.student_id),
-      student: isStaff ? values.student?.id : undefined,
+      student: canManageReservations ? values.student?.id : undefined,
     }),
     {
       onSuccess: (reservation) => {
@@ -77,6 +77,18 @@ function BookingForm({ room, booking, schedule, onBooked }) {
     setError(null)
   }
 
+  // Student assistants can see the room and its schedule, but do not book it.
+  if (isStaff && !canManageReservations) {
+    return (
+      <Card title="Reserve this room" icon={CalendarCheck}>
+        <p className="soft">
+          Reservations are requested by students and approved by the librarian. Use the schedule
+          to see when the room is in use.
+        </p>
+      </Card>
+    )
+  }
+
   return (
     <Card title="Reserve this room" icon={CalendarCheck}>
       <div className="stack">
@@ -88,7 +100,7 @@ function BookingForm({ room, booking, schedule, onBooked }) {
             </span>
           </p>
         )}
-        {isStaff && (
+        {canManageReservations && (
           <div className="stack-sm">
             <p className="field__label">Reserve for</p>
             <StudentPicker value={values.student} onChange={(student) => setField('student', student)} />
@@ -123,7 +135,7 @@ function BookingForm({ room, booking, schedule, onBooked }) {
 
         <InviteList
           value={values.invitees} max={room.capacity - 1}
-          ownStudentId={isStaff ? values.student?.student_id : user.student_id}
+          ownStudentId={canManageReservations ? values.student?.student_id : user.student_id}
           onChange={(invitees) => setField('invitees', invitees)}
         />
 
@@ -142,18 +154,22 @@ function BookingForm({ room, booking, schedule, onBooked }) {
         {!online && <p className="notice notice--warning">You are offline. Reconnect to reserve this room.</p>}
 
         <Button size="lg" block disabled={!ready} onClick={() => setReviewing(true)}>
-          Review reservation
+          {canManageReservations ? 'Review reservation' : 'Review request'}
         </Button>
       </div>
 
       <Modal
         open={reviewing} onClose={closeDialog} busy={reserving}
-        title={confirmed ? room.name : 'Review your reservation'}
-        description={confirmed ? undefined : 'Please check the details before confirming.'}
+        title={confirmed ? room.name : canManageReservations ? 'Review the reservation' : 'Review your request'}
+        description={confirmed ? undefined : canManageReservations
+          ? 'Please check the details before confirming.'
+          : 'The librarian must approve it before it is confirmed.'}
         footer={confirmed ? null : (
           <>
             <Button variant="secondary" onClick={closeDialog} disabled={reserving}>Go back</Button>
-            <Button onClick={() => { setError(null); reserve() }} loading={reserving}>Confirm reservation</Button>
+            <Button onClick={() => { setError(null); reserve() }} loading={reserving}>
+              {canManageReservations ? 'Confirm reservation' : 'Send request'}
+            </Button>
           </>
         )}
       >
@@ -166,7 +182,7 @@ function BookingForm({ room, booking, schedule, onBooked }) {
               items={[
                 { label: 'Room', value: `${room.name} (${room.code})` },
                 { label: 'Floor', value: room.floor_detail.name },
-                ...(isStaff && values.student
+                ...(canManageReservations && values.student
                   ? [{ label: 'Reserved for', value: `${values.student.full_name} · ${values.student.student_id}`, wide: true }]
                   : []),
                 { label: 'People', value: people },
@@ -203,7 +219,7 @@ export default function RoomDetailPage() {
         return (
           <>
             <PageHeader
-              back={{ to: '/rooms', label: 'All study rooms' }}
+              back={{ to: '/rooms', label: 'Study room' }}
               title={data.name}
               description={`Room ${data.code}`}
               actions={<Badge tone={status.tone} dot>{status.label}</Badge>}

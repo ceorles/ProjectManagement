@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
 import { useAction } from '../../hooks/useAction'
-import { libraryService, seatService } from '../../services'
+import { seatService } from '../../services'
 import { SEAT_FEATURES, ZONE_TYPES } from '../../utils/constants'
 import { fieldError } from '../../utils/errors'
 import Button from '../common/Button'
@@ -60,10 +59,13 @@ export function ZoneFormModal({ zone, floors, onClose, onSaved }) {
       <form id="resource-form" className="form-grid" onSubmit={form.onSubmit}>
         <FormError className="span-2" error={form.error?.fields ? null : form.error} />
         <TextField label="Zone name" required className="span-2" maxLength={60} {...form.bind('name')} />
-        <SelectField label="Floor" required {...form.bind('floor', Number)}>
-          {floors.map((floor) => <option key={floor.id} value={floor.id}>{floor.name}</option>)}
-        </SelectField>
-        <SelectField label="Type" {...form.bind('zone_type')}>
+        {/* The library has one floor, so there is normally nothing to choose. */}
+        {floors.length > 1 && (
+          <SelectField label="Floor" required {...form.bind('floor', Number)}>
+            {floors.map((floor) => <option key={floor.id} value={floor.id}>{floor.name}</option>)}
+          </SelectField>
+        )}
+        <SelectField label="Type" className={floors.length > 1 ? undefined : 'span-2'} {...form.bind('zone_type')}>
           {Object.entries(ZONE_TYPES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </SelectField>
         <TextField label="Rows" type="number" min={1} max={20} required {...form.bind('rows', toNumber)} />
@@ -79,13 +81,14 @@ export function SeatFormModal({ seat, zone, position, onClose, onSaved }) {
   const form = useResourceForm(
     seat
       ? {
-        number: seat.number, row: seat.row, col: seat.col,
+        number: seat.number, row: seat.row, col: seat.col, table_number: seat.table_number ?? '',
         ...Object.fromEntries(SEAT_FEATURES.map((feature) => [feature.key, seat[feature.key]])),
       }
-      : { number: '', row: position?.row ?? 1, col: position?.col ?? 1, has_power_outlet: false, has_computer: false, near_window: false, is_accessible: false },
-    (values) => (editing
-      ? seatService.update(seat.id, values)
-      : seatService.create({ ...values, zone: zone.id })),
+      : { number: '', row: position?.row ?? 1, col: position?.col ?? 1, table_number: '', has_power_outlet: false, has_computer: false, is_accessible: false },
+    (values) => {
+      const data = { ...values, table_number: values.table_number === '' ? null : values.table_number }
+      return editing ? seatService.update(seat.id, data) : seatService.create({ ...data, zone: zone.id })
+    },
     { success: (saved) => `Seat ${saved.number} ${editing ? 'updated' : 'added'}.`, onSaved },
   )
   return (
@@ -102,6 +105,9 @@ export function SeatFormModal({ seat, zone, position, onClose, onSaved }) {
           <TextField label="Column" type="number" min={1} max={zone.cols} required
             hint={`1 to ${zone.cols}`} {...form.bind('col', toNumber)} />
         </div>
+        <TextField label="Table number" type="number" min={1} max={99}
+          hint="Chairs with the same table number are drawn as one table. Leave empty for a stand-alone seat."
+          {...form.bind('table_number', toNumber)} />
         <fieldset className="stack-sm" style={{ border: 0, padding: 0, margin: 0 }}>
           <legend className="field__label">Features</legend>
           {SEAT_FEATURES.map((feature) => (
@@ -110,48 +116,6 @@ export function SeatFormModal({ seat, zone, position, onClose, onSaved }) {
           ))}
         </fieldset>
       </form>
-    </Modal>
-  )
-}
-
-/** Add, rename and remove the floors of the building. */
-export function FloorsModal({ floors, onClose, onChanged }) {
-  const [name, setName] = useState('')
-  const nextLevel = floors.length ? Math.max(...floors.map((floor) => floor.level)) + 1 : 0
-  const [add, adding] = useAction(() => libraryService.createFloor({ name: name.trim(), level: nextLevel }), {
-    success: 'Floor added.',
-    onSuccess: () => { setName(''); onChanged() },
-  })
-  const [remove, removing] = useAction((floor) => libraryService.deleteFloor(floor.id), {
-    success: 'Floor removed.', onSuccess: onChanged,
-  })
-  return (
-    <Modal open onClose={onClose} title="Floors" size="sm" busy={adding || removing}
-      description="Zones and study rooms are placed on a floor."
-      footer={<Button variant="secondary" onClick={onClose}>Done</Button>}>
-      <div className="stack">
-        <ul className="invitees">
-          {floors.map((floor) => (
-            <li key={floor.id} className="invitee">
-              <span>
-                <span className="strong">{floor.name}</span>
-                <span className="muted"> · {floor.seat_count} seats · {floor.room_count} rooms</span>
-              </span>
-              <button type="button" className="icon-button" aria-label={`Remove ${floor.name}`}
-                disabled={removing || floor.seat_count > 0 || floor.room_count > 0}
-                title={floor.seat_count || floor.room_count ? 'Only an empty floor can be removed' : 'Remove floor'}
-                onClick={() => remove(floor)}>
-                <Trash2 size={16} />
-              </button>
-            </li>
-          ))}
-        </ul>
-        <form className="invite-form" onSubmit={(event) => { event.preventDefault(); if (name.trim()) add() }}>
-          <input className="input" value={name} placeholder="New floor name, e.g. Fourth Floor"
-            aria-label="New floor name" maxLength={60} onChange={(event) => setName(event.target.value)} />
-          <Button type="submit" variant="secondary" loading={adding} disabled={!name.trim()}>Add</Button>
-        </form>
-      </div>
     </Modal>
   )
 }

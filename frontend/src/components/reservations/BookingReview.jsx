@@ -1,4 +1,4 @@
-import { CircleCheck, Info } from 'lucide-react'
+import { CircleCheck, Hourglass, Info } from 'lucide-react'
 import { useLibrary } from '../../hooks/useLibrary'
 import {
   formatDate, formatDuration, formatTime, formatTimeRange, minutesToTime, timeToMinutes,
@@ -46,6 +46,34 @@ export function BookingSummary({ items, window, end }) {
 
 /** Shown only after the server has confirmed the reservation. */
 export function BookingSuccess({ reservation, onDone }) {
+  // A student's request waits for the librarian. It is not shown as
+  // confirmed, and has no check-in code, until it has been approved.
+  if (reservation.status === 'pending') {
+    return (
+      <div className="stack booking-success">
+        <div className="booking-success__head booking-success__head--pending">
+          <Hourglass size={40} aria-hidden="true" />
+          <h3>Request sent</h3>
+          <p className="soft">
+            {reservation.resource.name} · {formatDate(reservation.date)} ·{' '}
+            {formatTimeRange(reservation.start_time, reservation.end_time)}
+          </p>
+        </div>
+        <p className="notice notice--warning">
+          <Info size={16} aria-hidden="true" />
+          <span>
+            Your request is <strong>pending</strong>. The librarian will review it, and you will
+            get a notification when it is approved or rejected. The places are held for you in
+            the meantime.
+          </span>
+        </p>
+        <div className="form-actions">
+          <Button variant="secondary" onClick={onDone}>Done</Button>
+          <Button to={`/reservations/${reservation.id}`}>View request</Button>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="stack booking-success">
       <div className="booking-success__head">

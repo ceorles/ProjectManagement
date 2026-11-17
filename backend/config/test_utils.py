@@ -46,6 +46,9 @@ class PortalTestCase(APITestCase):
         cls.student = User.objects.create_user(
             email='student@test.edu', password=PASSWORD, first_name='Sam', last_name='Student',
             role=User.Role.STUDENT, student_id='2024-0001')
+        cls.assistant = User.objects.create_user(
+            email='assistant@test.edu', password=PASSWORD, first_name='Asa', last_name='Sistant',
+            role=User.Role.ASSISTANT, student_id='2023-0900')
         cls.other_student = User.objects.create_user(
             email='other@test.edu', password=PASSWORD, first_name='Olive', last_name='Other',
             role=User.Role.STUDENT, student_id='2024-0002')
@@ -54,6 +57,19 @@ class PortalTestCase(APITestCase):
         cls.zone = Zone.objects.create(floor=cls.floor, name='Quiet Zone', rows=2, cols=3)
         cls.seat = Seat.objects.create(zone=cls.zone, number='A01', row=1, col=1)
         cls.seat2 = Seat.objects.create(zone=cls.zone, number='A02', row=1, col=2)
+        # A table of six chairs and a computer, as in the real library.
+        cls.table_zone = Zone.objects.create(floor=cls.floor, name='Reading Hall', rows=3, cols=3)
+        cls.table = [
+            Seat.objects.create(zone=cls.table_zone, number=f'T01-{n}', table_number=1,
+                                row=1 if n <= 3 else 3, col=(n - 1) % 3 + 1)
+            for n in range(1, 7)
+        ]
+        cls.computer_zone = Zone.objects.create(
+            floor=cls.floor, name='Computer Area', zone_type='computer', rows=1, cols=2)
+        cls.computer = Seat.objects.create(
+            zone=cls.computer_zone, number='PC-1', row=1, col=1, has_computer=True)
+        cls.computer2 = Seat.objects.create(
+            zone=cls.computer_zone, number='PC-2', row=1, col=2, has_computer=True)
         cls.room = StudyRoom.objects.create(
             name='Study Room 1', code='SR-1', floor=cls.floor, capacity=4, min_occupancy=2)
 
@@ -70,18 +86,31 @@ class PortalTestCase(APITestCase):
         end = start + timedelta(hours=hours)
         return build_window(day, start.time(), end.time())
 
-    def book_seat(self, student=None, seat=None, **window_kwargs):
+    def request_seats(self, seats, student=None, purpose='', **window_kwargs):
+        """A student's request, exactly as submitted: it stays PENDING."""
         student = student or self.student
         return services.create_reservation(
             actor=student, student=student, resource_type='seat',
-            resource_id=(seat or self.seat).pk, window=self.window(**window_kwargs))
+            seat_ids=[seat.pk for seat in seats], purpose=purpose,
+            window=self.window(**window_kwargs))
 
-    def book_room(self, student=None, participant_count=2, participants=(), **window_kwargs):
+    def book_seat(self, student=None, seat=None, approve=True, **window_kwargs):
+        """A student's seat request, approved by the librarian unless approve=False."""
+        reservation = self.request_seats([seat or self.seat], student, **window_kwargs)
+        if approve:
+            reservation = services.approve_reservation(reservation, actor=self.librarian)
+        return reservation
+
+    def book_room(self, student=None, participant_count=2, participants=(), approve=True,
+                  **window_kwargs):
         student = student or self.student
-        return services.create_reservation(
+        reservation = services.create_reservation(
             actor=student, student=student, resource_type='room', resource_id=self.room.pk,
             window=self.window(**window_kwargs), participant_count=participant_count,
             participants=participants)
+        if approve:
+            reservation = services.approve_reservation(reservation, actor=self.librarian)
+        return reservation
 
     def seat_payload(self, **overrides):
         payload = {

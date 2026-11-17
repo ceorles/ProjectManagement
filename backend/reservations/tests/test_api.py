@@ -14,7 +14,7 @@ class ReservationApiTests(PortalTestCase):
         with frozen_time(at(hour=9)):
             response = self.client.post('/api/reservations/', self.seat_payload())
         self.assertEqual(response.status_code, 201, response.data)
-        self.assertEqual(response.data['status'], 'confirmed')
+        self.assertEqual(response.data['status'], 'pending')  # never confirmed automatically
         self.assertEqual(response.data['resource']['name'], 'Seat A01')
         self.assertEqual(response.data['date'], DAY)
         self.assertEqual(response.data['start_time'], '11:00')
@@ -173,7 +173,7 @@ class AvailabilityApiTests(PortalTestCase):
             data, seats = self.seat_states(self.student)
             self.assertTrue(data['bookable'])
             self.assertEqual(seats['A01']['state'], 'available')
-            self.assertEqual(data['summary']['available'], 2)
+            self.assertEqual(data['summary']['available'], 10)
 
             reservation = self.book_seat(student=self.other_student)
             _, seats = self.seat_states(self.student)

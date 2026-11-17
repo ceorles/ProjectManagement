@@ -14,12 +14,25 @@ class IsAdmin(BasePermission):
 
 
 class IsLibraryStaff(BasePermission):
-    """Admins and librarians."""
+    """Admins, librarians and student assistants."""
 
     message = 'Only library staff can perform this action.'
 
     def has_permission(self, request, view):
         return _authenticated(request) and request.user.is_library_staff
+
+
+class IsReservationManager(BasePermission):
+    """
+    Admins and librarians: the people who decide on reservations (approve,
+    reject, record a no-show) and see the usage reports. Student Assistants
+    are deliberately not included.
+    """
+
+    message = 'Only a librarian can perform this action.'
+
+    def has_permission(self, request, view):
+        return _authenticated(request) and request.user.can_manage_reservations
 
 
 class IsStudent(BasePermission):

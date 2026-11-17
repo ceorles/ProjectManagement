@@ -6,7 +6,7 @@ from rest_framework import serializers
 from library.services import get_policy
 from users.models import User
 
-from .models import Reservation
+from .models import Reservation, describe_seats
 from .services import checkin_deadline, checkin_opens_at
 
 Status = Reservation.Status
@@ -20,6 +20,9 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     status_label = serializers.CharField(source='get_status_display', read_only=True)
     resource = serializers.SerializerMethodField()
+    seats = serializers.SerializerMethodField()
+    decided_by_name = serializers.SerializerMethodField()
+    can_approve = serializers.SerializerMethodField()
     date = serializers.SerializerMethodField()
     start_time = serializers.SerializerMethodField()
     end_time = serializers.SerializerMethodField()
@@ -38,11 +41,12 @@ class ReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
         fields = [
-            'id', 'code', 'resource_type', 'resource', 'date', 'start_time', 'end_time',
+            'id', 'code', 'resource_type', 'resource', 'seats', 'date', 'start_time', 'end_time',
             'start_at', 'end_at', 'duration_minutes', 'status', 'status_label',
             'participant_count', 'purpose', 'student', 'participants', 'is_owner',
             'booked_by_staff', 'created_at', 'checked_in_at', 'checked_out_at',
-            'cancelled_at', 'cancel_reason', 'checkin_opens_at', 'checkin_deadline',
+            'cancelled_at', 'cancel_reason', 'decided_at', 'decided_by_name', 'decision_note',
+            'checkin_opens_at', 'checkin_deadline', 'can_approve',
             'can_cancel', 'can_check_in', 'can_check_out', 'can_mark_no_show',
         ]
         read_only_fields = fields
@@ -66,11 +70,13 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     def get_resource(self, obj):
         if obj.resource_type == Reservation.ResourceType.SEAT:
-            seat = obj.seat
+            seats = obj.seat_list()
+            seat = seats[0]
             return {
-                'type': 'seat', 'id': seat.pk, 'name': f'Seat {seat.number}',
+                'type': 'seat', 'id': seat.pk, 'name': describe_seats(seats),
                 'code': seat.number, 'location': seat.location_label,
                 'zone': seat.zone.name, 'floor': seat.zone.floor.name,
+                'is_computer': seat.has_computer, 'seat_count': len(seats),
             }
         room = obj.room
         return {
@@ -78,6 +84,21 @@ class ReservationSerializer(serializers.ModelSerializer):
             'location': room.location_label, 'floor': room.floor.name,
             'capacity': room.capacity,
         }
+
+    def get_seats(self, obj):
+        if obj.resource_type != Reservation.ResourceType.SEAT:
+            return []
+        return [
+            {'id': seat.pk, 'number': seat.number, 'table_number': seat.table_number}
+            for seat in obj.seat_list()
+        ]
+
+    def get_decided_by_name(self, obj):
+        return obj.decided_by.full_name if obj.decided_by else None
+
+    def get_can_approve(self, obj):
+        """Approve or reject: only a librarian or admin, only while pending."""
+        return obj.status == Status.PENDING and self._viewer.can_manage_reservations
 
     def get_date(self, obj):
         return timezone.localtime(obj.start_at).date().isoformat()
@@ -124,12 +145,16 @@ class ReservationSerializer(serializers.ModelSerializer):
         return self._viewer.is_library_staff or obj.student_id == self._viewer.pk
 
     def get_can_cancel(self, obj):
-        if obj.status != Status.CONFIRMED:
+        if obj.status not in (Status.PENDING, Status.CONFIRMED):
             return False
-        if self._viewer.is_library_staff:
+        if self._viewer.can_manage_reservations:
             return True
+        if obj.student_id != self._viewer.pk:
+            return False
+        if obj.status == Status.PENDING:
+            return True  # a request can always be withdrawn
         cutoff = obj.start_at - timedelta(minutes=self._policy.cancellation_cutoff_minutes)
-        return obj.student_id == self._viewer.pk and self._now <= cutoff
+        return self._now <= cutoff
 
     def get_can_check_in(self, obj):
         if obj.status != Status.CONFIRMED:
@@ -148,7 +173,7 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     def get_can_mark_no_show(self, obj):
         return (
-            self._viewer.is_library_staff
+            self._viewer.can_manage_reservations
             and obj.status == Status.CONFIRMED
             and self._now >= obj.start_at
         )
@@ -159,6 +184,9 @@ class ReservationCreateSerializer(serializers.Serializer):
 
     resource_type = serializers.ChoiceField(choices=Reservation.ResourceType.choices)
     seat = serializers.IntegerField(required=False, allow_null=True)
+    # One to six seats (a whole table). `seat` is accepted for a single seat.
+    seats = serializers.ListField(
+        child=serializers.IntegerField(), required=False, default=list, max_length=20)
     room = serializers.IntegerField(required=False, allow_null=True)
     date = serializers.DateField()
     start_time = serializers.TimeField(input_formats=['%H:%M', '%H:%M:%S'])
@@ -173,13 +201,20 @@ class ReservationCreateSerializer(serializers.Serializer):
     student = serializers.IntegerField(required=False, allow_null=True)
 
     def validate(self, attrs):
-        field = attrs['resource_type']
-        if not attrs.get(field):
-            raise serializers.ValidationError({field: f'Choose a {field} to reserve.'})
-        attrs['resource_id'] = attrs[field]
+        if attrs['resource_type'] == Reservation.ResourceType.SEAT:
+            seat_ids = list(attrs['seats']) or ([attrs['seat']] if attrs.get('seat') else [])
+            if not seat_ids:
+                raise serializers.ValidationError({'seats': 'Choose at least one seat.'})
+            attrs['seat_ids'] = seat_ids
+            attrs['resource_id'] = None
+        else:
+            if not attrs.get('room'):
+                raise serializers.ValidationError({'room': 'Choose a room to reserve.'})
+            attrs['seat_ids'] = None
+            attrs['resource_id'] = attrs['room']
 
         viewer = self.context['request'].user
-        if viewer.is_library_staff:
+        if viewer.can_manage_reservations:
             student = User.objects.filter(
                 pk=attrs.get('student'), role=User.Role.STUDENT).first()
             if student is None:
@@ -201,6 +236,10 @@ class ReservationCreateSerializer(serializers.Serializer):
             participants.append(person)
         attrs['participants'] = participants
         return attrs
+
+
+class RejectSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
 
 
 class CancelSerializer(serializers.Serializer):

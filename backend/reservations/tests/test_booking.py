@@ -28,7 +28,7 @@ class BookingRuleTests(PortalTestCase):
         self.assertEqual(len(reservation.code), 8)
         self.assertEqual(reservation.slots.count(), 4)
         self.assertTrue(
-            Notification.objects.filter(user=self.student, title='Reservation confirmed').exists())
+            Notification.objects.filter(user=self.student, title='Reservation approved').exists())
 
     def test_past_times_are_rejected(self):
         with frozen_time(at(hour=12)):

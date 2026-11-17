@@ -59,6 +59,8 @@ export const reservationService = {
   list: (params) => api.get('/reservations/', params),
   get: (id) => api.get(`/reservations/${id}/`),
   create: (data) => api.post('/reservations/', data),
+  approve: (id) => api.post(`/reservations/${id}/approve/`),
+  reject: (id, reason = '') => api.post(`/reservations/${id}/reject/`, { reason }),
   cancel: (id, reason = '') => api.post(`/reservations/${id}/cancel/`, { reason }),
   checkIn: (id) => api.post(`/reservations/${id}/check-in/`),
   checkOut: (id) => api.post(`/reservations/${id}/check-out/`),

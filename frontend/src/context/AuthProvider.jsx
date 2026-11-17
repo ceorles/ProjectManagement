@@ -117,7 +117,9 @@ export function AuthProvider({ children }) {
     user,
     sessionExpired,
     isAuthenticated: status === 'authenticated',
-    isStaff: user?.role === 'admin' || user?.role === 'librarian',
+    isStaff: ['admin', 'librarian', 'assistant'].includes(user?.role),
+    // Approve, reject, cancel and book for a student: librarians and admins only.
+    canManageReservations: user?.role === 'admin' || user?.role === 'librarian',
     login,
     register,
     logout,

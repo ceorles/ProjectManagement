@@ -11,7 +11,7 @@ from datetime import time, timedelta
 from django.utils import timezone
 
 from library.services import get_day_schedule, local_now, local_today
-from reservations.models import Reservation
+from reservations.models import Reservation, ReservationSeat
 from reservations.windows import to_datetime
 from seats.models import Seat
 from study_rooms.models import StudyRoom
@@ -25,8 +25,9 @@ WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 def reservation_queryset():
     return (
         Reservation.objects
-        .select_related('student', 'seat__zone__floor', 'room__floor', 'created_by')
-        .prefetch_related('participants__student')
+        .select_related('student', 'seat__zone__floor', 'room__floor', 'created_by',
+                        'decided_by')
+        .prefetch_related('participants__student', 'reservation_seats__seat__zone__floor')
     )
 
 
@@ -106,11 +107,13 @@ def period_report(days):
     students = set()
     booked_minutes = 0
 
+    # Requests that never became a visit do not count as usage.
+    unused = (Status.CANCELLED, Status.REJECTED)
     rows = queryset.values_list(
-        'start_at', 'end_at', 'status', 'resource_type', 'seat__number', 'seat__zone__name',
-        'room__name', 'student_id',
+        'start_at', 'end_at', 'status', 'resource_type', 'room__name', 'room__is_archived',
+        'student_id',
     )
-    for start_at, end_at, status, resource_type, seat_number, zone_name, room_name, student in rows:
+    for start_at, end_at, status, resource_type, room_name, room_retired, student in rows:
         local_start = timezone.localtime(start_at)
         bucket = daily.get(local_start.date())
         if bucket is None:
@@ -119,17 +122,26 @@ def period_report(days):
         bucket[resource_type] += 1
         if status in bucket:
             bucket[status] += 1
-        if status == Status.CANCELLED:
-            continue  # cancelled bookings do not count as usage
+        if status in unused:
+            continue
         by_hour[local_start.hour] += 1
         by_weekday[local_start.weekday()] += 1
         students.add(student)
         booked_minutes += int((end_at - start_at).total_seconds() // 60)
-        if resource_type == Reservation.ResourceType.SEAT:
-            seat_use[f'Seat {seat_number}'] += 1
-            zone_use[zone_name] += 1
-        else:
+        if resource_type == Reservation.ResourceType.ROOM and not room_retired:
             room_use[room_name] += 1
+
+    # Seat rankings count every seat of a request, and only seats and areas
+    # that still exist in the library.
+    seat_rows = (
+        ReservationSeat.objects
+        .filter(reservation__in=queryset, seat__is_archived=False)
+        .exclude(reservation__status__in=unused)
+        .values_list('seat__number', 'seat__has_computer', 'seat__zone__name')
+    )
+    for number, is_computer, zone_name in seat_rows:
+        seat_use[f'Computer {number}' if is_computer else f'Seat {number}'] += 1
+        zone_use[zone_name] += 1
 
     counts = status_counts(queryset)
     hours = sorted(by_hour) or [8]
@@ -169,6 +181,7 @@ def system_totals():
         'seats': Seat.objects.count(),
         'rooms': StudyRoom.objects.count(),
         'active_reservations': Reservation.objects.filter(status__in=ACTIVE).count(),
+        'pending_requests': Reservation.objects.filter(status=Status.PENDING).count(),
         'reservations_today': Reservation.objects.filter(
             start_at__gte=today_start, start_at__lt=today_end).count(),
     }

@@ -12,8 +12,8 @@ class SeatManagementTests(PortalTestCase):
 
     def test_everyone_signed_in_can_browse_seats_and_zones(self):
         self.login_as(self.student)
-        self.assertEqual(self.client.get('/api/seats/').data['count'], 2)
-        self.assertEqual(len(self.client.get('/api/seats/zones/').data), 1)
+        self.assertEqual(self.client.get('/api/seats/').data['count'], 10)
+        self.assertEqual(len(self.client.get('/api/seats/zones/').data), 3)
 
     def test_admin_can_create_edit_and_delete_a_seat(self):
         self.login_as(self.admin)
@@ -21,8 +21,11 @@ class SeatManagementTests(PortalTestCase):
         self.assertEqual(created.status_code, 201, created.data)
         self.assertEqual(created.data['number'], 'A09')  # normalised
         seat_id = created.data['id']
-        edited = self.client.patch(f'/api/seats/{seat_id}/', {'near_window': True})
-        self.assertTrue(edited.data['near_window'])
+        edited = self.client.patch(
+            f'/api/seats/{seat_id}/', {'is_accessible': True, 'table_number': 3})
+        self.assertTrue(edited.data['is_accessible'])
+        self.assertEqual(edited.data['table_number'], 3)
+        self.assertNotIn('near_window', edited.data)  # the feature no longer exists
         self.assertEqual(self.client.delete(f'/api/seats/{seat_id}/').status_code, 204)
 
     def test_students_and_unprivileged_librarians_cannot_manage_seats(self):

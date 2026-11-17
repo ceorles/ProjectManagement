@@ -35,16 +35,17 @@ export default function AdminDashboard() {
               <StatCard icon={GraduationCap} label="Students" value={data.totals.students} to="/admin/users" />
               <StatCard icon={Users} label="Librarians" value={data.totals.librarians} to="/admin/users" />
               <StatCard icon={CalendarClock} label="Active reservations" value={data.totals.active_reservations}
-                tone="green" to="/manage/reservations" hint="Confirmed or checked in" />
+                tone="green" to="/manage/reservations"
+                hint={`${data.totals.pending_requests} awaiting approval`} />
               <StatCard icon={Armchair} label="Seats" value={data.totals.seats} to="/manage/seats" />
-              <StatCard icon={DoorOpen} label="Study rooms" value={data.totals.rooms} to="/manage/rooms" />
+              <StatCard icon={DoorOpen} label="Study room" value={data.totals.rooms} to="/rooms" />
               <StatCard icon={CalendarCheck} label="Reservations today" value={data.totals.reservations_today}
                 tone="yellow" to="/manage/reservations" />
             </div>
 
             <div className="grid-2">
               <Card><OccupancyMeter title="Seats right now" data={data.occupancy.seats} to="/seats" /></Card>
-              <Card><OccupancyMeter title="Study rooms right now" data={data.occupancy.rooms} to="/rooms" /></Card>
+              <Card><OccupancyMeter title="Study room right now" data={data.occupancy.rooms} to="/rooms" /></Card>
             </div>
 
             <div className="split">

@@ -66,7 +66,8 @@ export default function LoginPage() {
           Sign in
         </Button>
         <p className="muted small center">
-          Librarian and admin accounts are created by the library administrator.
+          Librarian, student assistant and admin accounts are created by the library
+          administrator.
         </p>
       </form>
     </AuthLayout>

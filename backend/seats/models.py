@@ -1,10 +1,10 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from library.models import Floor, ResourceStatus
+from library.models import Archivable, Floor, ResourceStatus
 
 
-class Zone(models.Model):
+class Zone(Archivable):
     """
     A named seating area on a floor (for example "Quiet Zone A"). Its seats
     are arranged on a rows x cols grid, which is what the seat map draws.
@@ -35,15 +35,18 @@ class Zone(models.Model):
         return f'{self.name} ({self.floor.name})'
 
 
-class Seat(models.Model):
+class Seat(Archivable):
     zone = models.ForeignKey(Zone, on_delete=models.PROTECT, related_name='seats')
     number = models.CharField(max_length=12, unique=True, help_text='Label shown on the seat.')
     # 1-based position on the zone grid.
     row = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
     col = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    # Seats that share a table number sit at the same physical table.
+    table_number = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='The table this chair belongs to. Empty for stand-alone seats.')
     has_power_outlet = models.BooleanField(default=False)
     has_computer = models.BooleanField(default=False)
-    near_window = models.BooleanField(default=False)
     is_accessible = models.BooleanField(default=False, help_text='Wheelchair accessible.')
     status = models.CharField(
         max_length=20, choices=ResourceStatus.choices, default=ResourceStatus.ACTIVE)
@@ -56,7 +59,10 @@ class Seat(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['zone', 'row', 'col'], name='unique_seat_position'),
         ]
-        indexes = [models.Index(fields=['zone', 'status'])]
+        indexes = [
+            models.Index(fields=['zone', 'status']),
+            models.Index(fields=['zone', 'table_number']),
+        ]
 
     def __str__(self):
         return f'Seat {self.number}'

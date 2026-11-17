@@ -16,7 +16,34 @@ class ResourceStatus(models.TextChoices):
     INACTIVE = 'inactive', 'Out of service'
 
 
-class Floor(models.Model):
+class ActiveManager(models.Manager):
+    """Default manager: leaves out records that have been retired."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_archived=False)
+
+
+class Archivable(models.Model):
+    """
+    For floors, zones, seats and rooms that no longer exist in the library.
+
+    They cannot simply be deleted, because past reservations point at them.
+    Archiving hides them from every list, map and report while the history
+    stays intact. `objects` returns only current records; `all_objects`
+    returns everything.
+    """
+
+    is_archived = models.BooleanField(
+        default=False, help_text='Retired: kept only for reservation history.')
+
+    objects = ActiveManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        abstract = True
+
+
+class Floor(Archivable):
     """A level of the library building. Seats (through zones) and rooms sit on one."""
 
     name = models.CharField(max_length=60, unique=True)

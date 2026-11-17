@@ -12,6 +12,7 @@ import ReservationActions from '../../components/reservations/ReservationActions
 import '../../components/reservations/reservations.css'
 import { POLL } from '../../config'
 import { useApiQuery } from '../../hooks/useApiQuery'
+import { useAuth } from '../../hooks/useAuth'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useFormDraft } from '../../hooks/useFormDraft'
 import { useLibrary } from '../../hooks/useLibrary'
@@ -24,6 +25,7 @@ const NO_FILTERS = { search: '', date: '', status: '', type: '' }
 /** Every reservation in the system, searchable and filterable. Staff only. */
 export default function ManageReservationsPage() {
   const { now } = useLibrary()
+  const { canManageReservations } = useAuth()
   // Filters are remembered, so a refresh shows the same list.
   const { values: filters, setField, setValues } = useFormDraft('reservation-filters', NO_FILTERS)
   const [page, setPage] = useState(1)
@@ -51,6 +53,9 @@ export default function ManageReservationsPage() {
         <>
           <Link to={`/reservations/${row.id}`} className="strong">{row.resource.name}</Link>
           <span className="muted small"> · {row.resource.location}</span>
+          {row.purpose && row.resource_type === 'seat' && (
+            <span className="muted small" style={{ display: 'block' }}>Reason: {row.purpose}</span>
+          )}
         </>
       ),
     },
@@ -83,8 +88,8 @@ export default function ManageReservationsPage() {
     <>
       <PageHeader
         title="Reservations"
-        description="Monitor, check in, cancel and review every reservation."
-        actions={<Button to="/seats" icon={Plus}>New reservation</Button>}
+        description="Review pending requests, and monitor, check in and cancel reservations."
+        actions={canManageReservations && <Button to="/seats" icon={Plus}>New reservation</Button>}
       />
 
       <section className="card">

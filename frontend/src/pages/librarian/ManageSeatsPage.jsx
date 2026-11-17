@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Armchair, Layers, Pencil, Plus, Trash2, Wrench } from 'lucide-react'
+import { Armchair, Pencil, Plus, Trash2, Wrench } from 'lucide-react'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
@@ -9,7 +9,7 @@ import { EmptyState, QueryBoundary } from '../../components/common/Feedback'
 import PageHeader from '../../components/common/PageHeader'
 import ResourceStatusDialog from '../../components/common/ResourceStatusDialog'
 import '../../components/rooms/rooms.css'
-import { FloorsModal, SeatFormModal, ZoneFormModal } from '../../components/seats/SeatForms'
+import { SeatFormModal, ZoneFormModal } from '../../components/seats/SeatForms'
 import SeatMap from '../../components/seats/SeatMap'
 import '../../components/seats/seats.css'
 import { useAction } from '../../hooks/useAction'
@@ -47,6 +47,10 @@ export default function ManageSeatsPage() {
 
   const columns = [
     { key: 'number', header: 'Seat', primary: true, render: (seat) => <span className="strong">{seat.number}</span> },
+    {
+      key: 'table', header: 'Table',
+      render: (seat) => (seat.table_number ? `Table ${seat.table_number}` : <span className="muted">-</span>),
+    },
     { key: 'position', header: 'Position', render: (seat) => `Row ${seat.row}, column ${seat.col}` },
     {
       key: 'features', header: 'Features',
@@ -80,12 +84,9 @@ export default function ManageSeatsPage() {
     <>
       <PageHeader
         title="Manage Seats"
-        description="Set up seating zones, place seats on the map, and take seats out of service."
+        description="The library's seating areas: place seats and tables on the map, and take seats out of service."
         actions={(
-          <>
-            <Button variant="secondary" icon={Layers} onClick={() => setDialog({ type: 'floors' })}>Floors</Button>
-            <Button icon={Plus} onClick={() => setDialog({ type: 'zone' })} disabled={!floors.data?.length}>Add zone</Button>
-          </>
+          <Button icon={Plus} onClick={() => setDialog({ type: 'zone' })} disabled={!floors.data?.length}>Add zone</Button>
         )}
       />
 
@@ -95,10 +96,9 @@ export default function ManageSeatsPage() {
             <EmptyState icon={Armchair} title="No seating zones yet"
               description={floors.data?.length
                 ? 'Add a zone, then place seats in it.'
-                : 'Start by adding a floor, then a zone on that floor.'}
-              action={floors.data?.length
-                ? <Button icon={Plus} onClick={() => setDialog({ type: 'zone' })}>Add zone</Button>
-                : <Button icon={Layers} onClick={() => setDialog({ type: 'floors' })}>Add a floor</Button>} />
+                : 'Run "python manage.py setup_library" to create the library layout.'}
+              action={floors.data?.length > 0
+                && <Button icon={Plus} onClick={() => setDialog({ type: 'zone' })}>Add zone</Button>} />
           </div>
         ) : (
           <div className="stack-lg">
@@ -108,7 +108,9 @@ export default function ManageSeatsPage() {
                   className={`zone-card ${item.id === zone.id ? 'is-active' : ''}`} aria-pressed={item.id === zone.id}>
                   <span className="strong">{item.name}</span>
                   <span className="muted small">{item.floor_detail.name} · {ZONE_TYPES[item.zone_type]}</span>
-                  <span className="small">{item.seat_count} seats · {item.rows} x {item.cols} grid</span>
+                  <span className="small">
+                    {item.zone_type === 'computer' ? `${item.seat_count} computers` : `${item.seat_count} seats`}
+                  </span>
                 </button>
               ))}
             </div>
@@ -155,9 +157,6 @@ export default function ManageSeatsPage() {
         ))}
       </QueryBoundary>
 
-      {dialog?.type === 'floors' && (
-        <FloorsModal floors={floors.data ?? []} onClose={close} onChanged={() => floors.refetch()} />
-      )}
       {dialog?.type === 'zone' && (
         <ZoneFormModal zone={dialog.zone} floors={floors.data ?? []} onClose={close}
           onSaved={(saved) => { setZoneId(saved.id); reload() }} />

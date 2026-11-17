@@ -1,4 +1,6 @@
-import { Armchair, ChevronRight, Clock, DoorOpen, MapPin, UserRound, Users } from 'lucide-react'
+import {
+  Armchair, ChevronRight, Clock, DoorOpen, MapPin, MessageSquare, Monitor, UserRound, Users,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useLibrary } from '../../hooks/useLibrary'
@@ -11,7 +13,7 @@ export default function ReservationCard({ reservation, onChanged, showStudent = 
   const { now } = useLibrary()
   const { isStaff } = useAuth()
   const { resource } = reservation
-  const Icon = resource.type === 'seat' ? Armchair : DoorOpen
+  const Icon = resource.type === 'room' ? DoorOpen : resource.is_computer ? Monitor : Armchair
 
   return (
     <article className={`reservation-card reservation-card--${reservation.status}`}>
@@ -43,6 +45,12 @@ export default function ReservationCard({ reservation, onChanged, showStudent = 
               <span>{reservation.student.full_name}
                 {reservation.student.student_id && <span className="muted"> · {reservation.student.student_id}</span>}
               </span>
+            </li>
+          )}
+          {showStudent && reservation.purpose && (
+            <li className="reservation-card__reason">
+              <MessageSquare size={14} aria-hidden="true" />
+              <span>{resource.type === 'seat' ? 'Reason' : 'Purpose'}: {reservation.purpose}</span>
             </li>
           )}
         </ul>

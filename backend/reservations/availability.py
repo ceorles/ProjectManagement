@@ -10,14 +10,14 @@ from library.services import get_day_schedule, get_policy
 from seats.models import Seat, Zone
 from study_rooms.models import StudyRoom
 
-from .models import Reservation
+from .models import Reservation, ReservationSeat
 from .windows import check_bookable, to_datetime
 
 ACTIVE = Reservation.ACTIVE_STATUSES
 
 # States a seat or room can be in for a requested time window.
 AVAILABLE = 'available'      # free for the whole window
-RESERVED = 'reserved'        # booked by someone, not yet checked in
+RESERVED = 'reserved'        # requested (pending) or confirmed, not yet checked in
 OCCUPIED = 'occupied'        # someone is checked in
 MINE = 'mine'                # the viewer's own reservation
 UNAVAILABLE = 'unavailable'  # under maintenance / out of service
@@ -104,12 +104,18 @@ def seat_availability(window, *, viewer, floor_id=None, zone_id=None):
     zones = list(zones)
 
     seats = Seat.objects.filter(zone__in=zones).order_by('row', 'col')
+    # A request can cover several seats, so availability is looked up per seat.
     by_seat = defaultdict(list)
-    for reservation in _overlapping(
-        window.start_at, window.end_at,
-        resource_type=Reservation.ResourceType.SEAT, seat__zone__in=zones,
-    ):
-        by_seat[reservation.seat_id].append(reservation)
+    links = (
+        ReservationSeat.objects
+        .filter(seat__zone__in=zones, reservation__status__in=ACTIVE,
+                reservation__start_at__lt=window.end_at,
+                reservation__end_at__gt=window.start_at)
+        .select_related('reservation__student')
+        .order_by('reservation__start_at')
+    )
+    for link in links:
+        by_seat[link.seat_id].append(link.reservation)
 
     seats_by_zone = defaultdict(list)
     all_states = []
@@ -124,7 +130,7 @@ def seat_availability(window, *, viewer, floor_id=None, zone_id=None):
             'col': seat.col,
             'has_power_outlet': seat.has_power_outlet,
             'has_computer': seat.has_computer,
-            'near_window': seat.near_window,
+            'table_number': seat.table_number,
             'is_accessible': seat.is_accessible,
             'status': seat.status,
             'status_note': seat.status_note,
@@ -193,7 +199,7 @@ def day_schedule(resource, day, *, viewer):
     """Opening hours and every booked interval of one seat/room on one day."""
     schedule = get_day_schedule(day)
     day_start = to_datetime(day, time.min)
-    field = 'seat' if isinstance(resource, Seat) else 'room'
+    field = 'reservation_seats__seat' if isinstance(resource, Seat) else 'room'
     reservations = _overlapping(day_start, day_start + timedelta(days=1), **{field: resource})
     return {
         'date': day.isoformat(),
@@ -212,9 +218,15 @@ def occupancy_now(now=None):
     current = Reservation.objects.filter(status__in=ACTIVE, start_at__lte=now, end_at__gt=now)
 
     def tally(resource_type, total, unavailable):
-        rows = current.filter(resource_type=resource_type)
-        occupied = rows.filter(status=Reservation.Status.CHECKED_IN).count()
-        reserved = rows.filter(status=Reservation.Status.CONFIRMED).count()
+        if resource_type == Reservation.ResourceType.SEAT:
+            # Count seats, not reservations: one request may hold a whole table.
+            rows = ReservationSeat.objects.filter(reservation__in=current)
+            occupied = rows.filter(reservation__status=Reservation.Status.CHECKED_IN).count()
+            reserved = rows.exclude(reservation__status=Reservation.Status.CHECKED_IN).count()
+        else:
+            rows = current.filter(resource_type=resource_type)
+            occupied = rows.filter(status=Reservation.Status.CHECKED_IN).count()
+            reserved = rows.exclude(status=Reservation.Status.CHECKED_IN).count()
         bookable = total - unavailable
         return {
             'total': total,

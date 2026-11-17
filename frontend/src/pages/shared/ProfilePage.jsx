@@ -55,7 +55,7 @@ function ProfileForm() {
         <TextField label="Email address" value={user.email} disabled readOnly
           hint="Contact the library to change your email." />
         <TextField label="Mobile number" type="tel" autoComplete="tel" {...bind('phone')} />
-        {user.role === 'student' && (
+        {(user.role === 'student' || user.role === 'assistant') && (
           <>
             <TextField label="Student ID" value={user.student_id || ''} disabled readOnly />
             <SelectField label="Year level" {...bind('year_level')}>

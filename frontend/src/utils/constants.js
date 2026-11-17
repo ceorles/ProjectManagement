@@ -3,15 +3,18 @@
 export const ROLES = {
   admin: 'Admin',
   librarian: 'Librarian',
+  assistant: 'Student Assistant',
   student: 'Student',
 }
 
 /** Reservation status -> label and badge tone. */
 export const RESERVATION_STATUS = {
+  pending: { label: 'Pending', tone: 'yellow' },
   confirmed: { label: 'Confirmed', tone: 'blue' },
   checked_in: { label: 'Checked in', tone: 'green' },
   completed: { label: 'Completed', tone: 'gray' },
   cancelled: { label: 'Cancelled', tone: 'red' },
+  rejected: { label: 'Rejected', tone: 'red' },
   no_show: { label: 'No-show', tone: 'orange' },
 }
 
@@ -40,7 +43,6 @@ export const ZONE_TYPES = {
 export const SEAT_FEATURES = [
   { key: 'has_power_outlet', label: 'Power outlet' },
   { key: 'has_computer', label: 'Computer' },
-  { key: 'near_window', label: 'Near window' },
   { key: 'is_accessible', label: 'Wheelchair accessible' },
 ]
 

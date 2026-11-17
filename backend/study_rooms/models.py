@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from library.models import Floor, ResourceStatus
+from library.models import Archivable, Floor, ResourceStatus
 
 
 class Facility(models.Model):
@@ -18,7 +18,7 @@ class Facility(models.Model):
         return self.name
 
 
-class StudyRoom(models.Model):
+class StudyRoom(Archivable):
     name = models.CharField(max_length=80)
     code = models.CharField(max_length=12, unique=True, help_text='Room number, e.g. SR-201.')
     floor = models.ForeignKey(Floor, on_delete=models.PROTECT, related_name='study_rooms')

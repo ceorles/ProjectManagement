@@ -1,6 +1,6 @@
 import { formatTime, formatTimeRange, timeToMinutes } from '../../utils/datetime'
 
-const LABELS = { confirmed: 'Reserved', checked_in: 'In use' }
+const LABELS = { pending: 'Requested', confirmed: 'Reserved', checked_in: 'In use' }
 
 function hourMarks(opens, closes) {
   const marks = []

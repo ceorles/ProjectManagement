@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from activity.models import ActivityLog
 from activity.serializers import ActivityLogSerializer
 from config.exceptions import ApiError
-from config.permissions import IsAdmin, IsLibraryStaff, IsStudent
+from config.permissions import IsAdmin, IsLibraryStaff, IsReservationManager, IsStudent
 from library.services import get_policy, local_today
 from reservations.availability import occupancy_now
 from reservations.models import Reservation
@@ -32,10 +32,11 @@ class StudentDashboardView(APIView):
         mine = selectors.reservation_queryset().filter(student=user)
 
         active = list(mine.filter(status__in=ACTIVE, end_at__gt=now).order_by('start_at'))
-        # "Current" = already checked in, or check-in is open right now.
+        # "Current" = already checked in, or approved and check-in is open now.
         current = next(
             (r for r in active
-             if r.status == Status.CHECKED_IN or checkin_opens_at(r, policy) <= now),
+             if r.status == Status.CHECKED_IN
+             or (r.status == Status.CONFIRMED and checkin_opens_at(r, policy) <= now)),
             None,
         )
         upcoming = [r for r in active if r is not current]
@@ -83,6 +84,10 @@ class StaffDashboardView(APIView):
             'library': selectors.library_today(),
             'occupancy': occupancy_now(now),
             'today': selectors.status_counts(today),
+            # Requests waiting for a librarian's decision, soonest first.
+            'pending_count': queryset.filter(status=Status.PENDING).count(),
+            'pending': _serialize(
+                request, queryset.filter(status=Status.PENDING).order_by('start_at')[:20]),
             'checked_in': _serialize(
                 request, queryset.filter(status=Status.CHECKED_IN).order_by('end_at')[:20]),
             # Started but nobody has arrived yet: needs a check-in or becomes a no-show.
@@ -118,9 +123,9 @@ class AdminDashboardView(APIView):
 
 
 class ReportView(APIView):
-    """Usage report for a period. Available to all library staff."""
+    """Usage report for a period. Available to librarians and admins."""
 
-    permission_classes = [IsLibraryStaff]
+    permission_classes = [IsReservationManager]
     ALLOWED_DAYS = (7, 14, 30, 90)
 
     def get(self, request):

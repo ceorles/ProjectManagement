@@ -150,7 +150,7 @@ export default function StudentDashboard() {
                   <div className="stack-lg">
                     <OccupancyMeter title="Seats" data={data.occupancy.seats} to="/seats" />
                     <hr className="divider" />
-                    <OccupancyMeter title="Study rooms" data={data.occupancy.rooms} to="/rooms" />
+                    <OccupancyMeter title="Study room" data={data.occupancy.rooms} to="/rooms" />
                   </div>
                 </Card>
                 <Card title="Your booking standing">
