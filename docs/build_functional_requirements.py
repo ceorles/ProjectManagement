@@ -27,9 +27,11 @@ TITLE = 'Functional Requirements of the Library Seat & Study Room Reservation Po
 SUBTITLE = 'Stakeholder: the School Library'
 INTRO = (
     'This document lists the functional requirements of the Library Seat & Study Room '
-    'Reservation Portal, a web application that lets students request library seats, tables, '
-    'computers and the study room, and lets the library staff review and manage those '
-    'requests. The requirements describe the system as it is implemented. They reflect the '
+    'Reservation Portal of DLL Library (Dalubhasaan ng Lungsod ng Lucena), a web application '
+    'that lets students request library seats, tables, computers and the study room, and '
+    'lets the library staff review and manage those requests. It also includes a public '
+    "website with the library's information. The requirements describe the system as it is "
+    'implemented. They reflect the '
     'actual library: one floor (First Floor), a Reading Hall with 15 tables of 6 chairs '
     '(90 seats), a Computer Area with 4 computers, and one study room.'
 )
@@ -48,6 +50,7 @@ SECTIONS = [
         ('User Logout', 'Users can log out, which ends their session on that device.'),
         ('Session Persistence', 'A logged-in user stays logged in after refreshing or reopening the page.'),
         ('Expired Session Handling', 'When a session expires, the system asks the user to log in again and returns them to the page they were on.'),
+        ('Role-Based Redirection After Login', 'After logging in, each user is taken to the dashboard of their own role, never to a page left open by the previous user.'),
         ('Password Rules', 'The system rejects passwords that are too short, too common or made of numbers only.'),
         ('Login Attempt Limiting', 'The system limits repeated login and registration attempts to protect accounts.'),
         ('Account Creation by Admin', 'The Admin can create Librarian, Student Assistant, Student and Admin accounts.'),
@@ -189,11 +192,25 @@ SECTIONS = [
         ('Update Profile', 'Users can update their name, mobile number, program and year level.'),
         ('Change Password', 'Users can change their password by entering their current password and a new one.'),
     ]),
+    ('Public Website (Landing Page)', [
+        ('Public Landing Page', 'Visitors can open the DLL Library website without logging in.'),
+        ('Landing Page Navigation', 'The website header has Home, Our Services, About and Contact links, an Install button and a Login button.'),
+        ('Library Information Display', 'The website shows the library name, tagline, introduction, services, library card requirements, rules and personnel.'),
+        ('Library Hours Display', 'The website shows the library hours from the same opening hours setting used for reservations.'),
+        ('Contact Information Display', "The website shows the library's address, telephone, email and Facebook page."),
+        ('Back to Website from Login', 'The login page has a Back button that returns to the website when it is opened in a browser.'),
+        ('Library Information Management', 'The Admin can edit the library name, tagline, introduction and contact information in Library Settings.'),
+        ('Landing Page Content Management', 'The Admin can add, edit, reorder and remove library services, library card steps, rules, personnel and library photos.'),
+        ('Personnel and Library Photos', 'The Admin can upload a photo for each library staff member and photos of the library for the website.'),
+        ('Read-Only Public Content', 'Visitors and non-admin users can read the website content but cannot change it.'),
+    ]),
     ('Other System Functions', [
         ('Automatic Data Refresh', 'Seat availability, dashboards and notifications refresh automatically every few seconds.'),
         ('Form Draft Preservation', 'Information entered in a form is kept when the page is refreshed and cleared after submission or logout.'),
         ('Responsive Layout', 'The system adapts to desktop, laptop, tablet and mobile screens, with a menu button on smaller screens.'),
-        ('Installable Application', 'Users can install the system on a phone or computer and open it like an app.'),
+        ('Installable Application', 'Users can install the system on a phone or computer from the Install button on the landing page or in the sidebar; instructions are shown when the browser does not offer installation.'),
+        ('Installed App Start', "The installed app opens directly on the login page, or on the user's dashboard when already logged in, without showing the public website."),
+        ('Installed App Session', 'Users of the installed app stay logged in after closing and reopening it, until they log out or the session expires.'),
         ('Offline Notice', 'When there is no connection, the system says so and does not allow reservation actions until the connection returns.'),
         ('Action Confirmation', 'The system asks for confirmation before actions such as cancelling, rejecting or deactivating.'),
     ]),

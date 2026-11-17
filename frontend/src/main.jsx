@@ -5,6 +5,7 @@ import '@fontsource-variable/inter'
 import './styles/tokens.css'
 import './styles/base.css'
 import './components/common/common.css'
+import './utils/pwa' // starts listening for the browser's install offer at once
 import App from './App.jsx'
 
 // Installs the service worker that makes the app installable and lets its

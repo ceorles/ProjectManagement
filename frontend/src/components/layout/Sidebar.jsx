@@ -5,6 +5,7 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt'
 import { ROLES } from '../../utils/constants'
 import { navigationFor } from '../../utils/navigation'
 import { initials } from '../../utils/roles'
+import InstallHelpDialog from '../common/InstallHelpDialog'
 import Logo from './Logo'
 
 /**
@@ -13,7 +14,7 @@ import Logo from './Logo'
  */
 export default function Sidebar({ open, onClose, unread }) {
   const { user, logout } = useAuth()
-  const { canInstall, install } = useInstallPrompt()
+  const { installed, install, helpOpen, closeHelp } = useInstallPrompt()
   const sections = navigationFor(user)
 
   return (
@@ -52,7 +53,8 @@ export default function Sidebar({ open, onClose, unread }) {
       </nav>
 
       <div className="sidebar__footer">
-        {canInstall && (
+        {/* Every role can install the app. Hidden when it is already running installed. */}
+        {!installed && (
           <button type="button" className="sidebar__link sidebar__link--button" onClick={install}>
             <Download size={18} aria-hidden="true" />
             <span>Install app</span>
@@ -69,6 +71,7 @@ export default function Sidebar({ open, onClose, unread }) {
           </button>
         </div>
       </div>
+      <InstallHelpDialog open={helpOpen} onClose={closeHelp} />
     </aside>
   )
 }

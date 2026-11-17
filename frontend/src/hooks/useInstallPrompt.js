@@ -1,34 +1,37 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react'
+import { getInstallState, promptInstall, subscribeInstall } from '../utils/pwa'
+
+let snapshot = getInstallState()
+function read() {
+  const next = getInstallState()
+  if (next.canPrompt !== snapshot.canPrompt || next.installed !== snapshot.installed) snapshot = next
+  return snapshot
+}
 
 /**
- * Lets the app offer its own "Install app" button. Browsers that support
- * installation fire `beforeinstallprompt`; we keep the event and trigger it
- * when the user asks. (Safari on iOS installs through Share > Add to Home
- * Screen and never fires this event.)
+ * State and action for an "Install app" button.
+ *
+ *   installed  - already running as the installed app: hide the button.
+ *   install()  - shows the browser's install dialog when it has offered one;
+ *                otherwise opens the manual instructions (`helpOpen`).
+ *
+ * Nothing claims success on its own: the button disappears only when the
+ * browser reports that the app was actually installed.
  */
 export function useInstallPrompt() {
-  const [promptEvent, setPromptEvent] = useState(null)
-
-  useEffect(() => {
-    const onPrompt = (event) => {
-      event.preventDefault()
-      setPromptEvent(event)
-    }
-    const onInstalled = () => setPromptEvent(null)
-    window.addEventListener('beforeinstallprompt', onPrompt)
-    window.addEventListener('appinstalled', onInstalled)
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt)
-      window.removeEventListener('appinstalled', onInstalled)
-    }
-  }, [])
+  const state = useSyncExternalStore(subscribeInstall, read, read)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const install = useCallback(async () => {
-    if (!promptEvent) return
-    promptEvent.prompt()
-    await promptEvent.userChoice
-    setPromptEvent(null)
-  }, [promptEvent])
+    const outcome = await promptInstall()
+    if (outcome === 'unavailable') setHelpOpen(true)
+  }, [])
 
-  return { canInstall: Boolean(promptEvent), install }
+  return {
+    installed: state.installed,
+    canPrompt: state.canPrompt,
+    install,
+    helpOpen,
+    closeHelp: () => setHelpOpen(false),
+  }
 }

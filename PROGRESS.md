@@ -4,20 +4,82 @@ Library Seat & Study Room Reservation Portal. This file records what is built,
 what has been verified, and what is left. Updated at the end of each work
 session.
 
-**Last updated:** 2026-11-16
+**Last updated:** 2026-11-17
 
 ## Status at a glance
 
 | Area | State |
 |---|---|
-| Backend (Django REST API) | Complete. 150 automated tests pass. |
+| Backend (Django REST API) | Complete. 160 automated tests pass. |
 | Frontend (React + Vite) | Complete. Builds, and lints with no warnings. |
 | Library revision (real stakeholder data) | Complete and tested (details below). |
 | PWA (manifest, service worker, icons) | Complete (unchanged by the revision). |
-| Documentation | `README.md`, `frontend/README.md`, `docs/Functional_Requirements.pdf` and `.md`. |
+| Public website (landing page) | Complete and tested (revision 2, below). |
+| Documentation | `README.md`, `frontend/README.md`, `docs/Functional_Requirements.pdf` and `.md` (140 requirements). |
 
-The revision is in the working tree and **not committed yet** (the previous
-state is the last commit, so the changes can be reviewed with `git diff`).
+Revision 2 is in the working tree and **not committed yet** (revision 1 is in
+the last commit, so the changes can be reviewed with `git diff`).
+
+## Session of 2026-11-17: revision 2 (branding, website, installation)
+
+Only what was asked; the app's design is otherwise unchanged.
+
+1. **Branding:** "DLL Library" (sidebar, login page, browser tab, installed app
+   name). The logo reads "DLL Library / Reservation Portal".
+2. **Sign-in after another user signs out:** each person now lands on their
+   own dashboard. Pressing Sign out forgets the page that was open; a page
+   remembered from an expired session or a bookmark is reopened only for the
+   same person and only if their role may open it.
+3. **Install app** is shown in every role's sidebar (it was hidden because the
+   browser's install offer was only listened for after the sidebar appeared,
+   and it often fires before that). It opens the browser's own install
+   dialog when offered, otherwise step-by-step instructions; it is hidden in
+   the installed app.
+4. **Header:** library status and the notification bell only. Profile and
+   Sign out remain in the sidebar.
+5. **Public website** at `/` built from the library's information board
+   (services, library card, rules, personnel, hours, contact), with Home, Our
+   Services, About, Contact, Install and Login. Responsive with a menu below
+   900 px.
+6. **Library Settings** has two new tabs, Library information and Landing
+   page, for the Admin to edit all of it (including photos). The hours come
+   from the existing Opening hours tab.
+7. **Login page:** a Back button to the website in a browser; none in the
+   installed app.
+8. **Installed app:** opens on the login page (or the dashboard when signed
+   in), never the website, and stays signed in after being closed.
+
+Backend: four models in the `library` app (`LibraryProfile`, `LandingItem`,
+`LibraryPersonnel`, `LandingPhoto`), migrations `library.0005` (tables) and
+`library.0006` (the board's content), public read endpoint and Admin-only
+editing endpoints, media uploads (Pillow added to `requirements.txt`).
+
+### Verification (2026-11-17)
+
+| Check | Result |
+|---|---|
+| Backend tests | 160 passed (10 new for the website and its settings) |
+| Revision 2 in a real browser (branding, role switching, install, header, website, settings) | 58 / 59; the one miss was a wrong test assumption (see below) |
+| Website at 1440 / 1280 / 820 / 390 px | 32 / 32 |
+| Installed app (production build, standalone mode, persistent profile) | 14 / 14 |
+| Revision 1 workflows (approval, tables, computers, assistant) | 81 / 81 |
+| Every portal page, all roles, four widths | No errors or sideways scrolling |
+| Lint / build | Clean |
+
+The miss: the test expected the Contact section at the top of the window, but
+Contact is the last section, so the page correctly stops at the bottom with
+the whole section in view.
+
+Notes:
+
+- Seats T03-6 and T05-2 were set "Out of service (Missing Chair)" from the
+  Admin account on Nov 16, so Tables 3 and 5 cannot be requested whole. This
+  is correct behaviour and was left as it is.
+- The personnel names are copied exactly from the board ("Ms. Mjie", ...).
+  The board shows first names only; edit them in Library Settings if needed.
+- No email address is on the board, so none is shown until one is entered.
+- No library photos are uploaded yet; the website shows its navy banner until
+  the Admin adds some in Library Settings > Landing page.
 
 ## Session of 2026-11-16: revision to match the real library
 

@@ -55,7 +55,9 @@ function buildUrl(path, params) {
 
 async function send(path, { method = 'GET', body, params, auth = true, headers = {}, signal } = {}) {
   const requestHeaders = { Accept: 'application/json', ...headers }
-  if (body !== undefined) requestHeaders['Content-Type'] = 'application/json'
+  // FormData (file uploads) sets its own multipart Content-Type.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+  if (body !== undefined && !isForm) requestHeaders['Content-Type'] = 'application/json'
   if (auth && accessToken) requestHeaders.Authorization = `Bearer ${accessToken}`
 
   let response
@@ -63,7 +65,7 @@ async function send(path, { method = 'GET', body, params, auth = true, headers =
     response = await fetch(buildUrl(path, params), {
       method,
       headers: requestHeaders,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       credentials: 'include', // lets the browser send the refresh cookie
       signal,
     })

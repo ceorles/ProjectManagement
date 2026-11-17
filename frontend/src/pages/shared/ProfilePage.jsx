@@ -9,6 +9,7 @@ import { useAction } from '../../hooks/useAction'
 import { useAuth } from '../../hooks/useAuth'
 import { useFormDraft } from '../../hooks/useFormDraft'
 import { useInstallPrompt } from '../../hooks/useInstallPrompt'
+import InstallHelpDialog from '../../components/common/InstallHelpDialog'
 import { useLibrary } from '../../hooks/useLibrary'
 import { authService } from '../../services'
 import { ROLES } from '../../utils/constants'
@@ -123,7 +124,7 @@ function PasswordForm() {
 export default function ProfilePage() {
   const { user, logout } = useAuth()
   const { timeZone } = useLibrary()
-  const { canInstall, install } = useInstallPrompt()
+  const { installed, canPrompt: canInstall, install, helpOpen, closeHelp } = useInstallPrompt()
 
   return (
     <>
@@ -159,7 +160,10 @@ export default function ProfilePage() {
                 Install the portal on your phone or computer to open it from the home screen like
                 any other app.
               </p>
-              {canInstall ? (
+              <InstallHelpDialog open={helpOpen} onClose={closeHelp} />
+              {installed ? (
+                <p className="muted small">You are using the installed app.</p>
+              ) : canInstall ? (
                 <Button icon={Download} onClick={install}>Install app</Button>
               ) : (
                 <p className="muted small">

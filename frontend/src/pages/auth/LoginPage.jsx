@@ -5,6 +5,7 @@ import Button from '../../components/common/Button'
 import { FormError, PasswordField, TextField } from '../../components/common/FormControls'
 import { useAuth } from '../../hooks/useAuth'
 import { useFormDraft } from '../../hooks/useFormDraft'
+import { isStandalone } from '../../utils/pwa'
 import AuthLayout from './AuthLayout'
 
 export default function LoginPage() {
@@ -35,6 +36,8 @@ export default function LoginPage() {
 
   return (
     <AuthLayout
+      // The website has a public landing page to go back to; the installed app does not.
+      back={isStandalone() ? null : { to: '/', label: 'Back to DLL Library' }}
       title="Sign in"
       subtitle="Use your library portal account to continue."
       footer={<>New student? <Link to="/register" state={location.state}>Create an account</Link></>}

@@ -17,6 +17,17 @@
 }
 
 .auth__card { width: 100%; max-width: 440px; }
+
+.auth__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  margin-bottom: 16px;
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
 .auth__card--wide { max-width: 560px; }
 .auth__mobile-logo { margin-bottom: 28px; }
 .auth__title { font-size: var(--text-2xl); }

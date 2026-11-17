@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { CalendarX, Clock, ListChecks, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { CalendarX, Clock, Globe, Info, ListChecks, Plus, Trash2, TriangleAlert } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
 import { EmptyState } from '../../components/common/Feedback'
 import { Checkbox, FormError, SelectField, TextField } from '../../components/common/FormControls'
 import PageHeader from '../../components/common/PageHeader'
+import { LandingContentSettings, LibraryInfoSettings } from '../../components/settings/LandingSettings'
+import '../../components/settings/settings.css'
 import Tabs from '../../components/common/Tabs'
 import { useAction } from '../../hooks/useAction'
 import { useFormDraft } from '../../hooks/useFormDraft'
@@ -19,6 +21,8 @@ const TABS = [
   { value: 'hours', label: 'Opening hours', icon: Clock },
   { value: 'closures', label: 'Closures', icon: CalendarX },
   { value: 'rules', label: 'Reservation rules', icon: ListChecks },
+  { value: 'info', label: 'Library information', icon: Info },
+  { value: 'landing', label: 'Landing page', icon: Globe },
 ]
 
 function timeOptions(slot) {
@@ -271,7 +275,7 @@ function RuleSettings() {
   )
 }
 
-/** Admin: opening hours, closure days and the booking rules. */
+/** Admin: opening hours, closure days, the booking rules, and the public landing page. */
 export default function SettingsPage() {
   const tabDraft = useFormDraft('settings-tab', { tab: 'hours' })
   const { tab } = tabDraft.values
@@ -279,13 +283,15 @@ export default function SettingsPage() {
     <>
       <PageHeader
         title="Library Settings"
-        description="When the library is open and the rules every reservation must follow."
+        description="When the library is open, the rules every reservation must follow, and what the public landing page shows."
       />
       <div className="stack">
         <Tabs tabs={TABS} value={tab} onChange={(value) => tabDraft.setField('tab', value)} label="Settings" />
         {tab === 'hours' && <HoursSettings />}
         {tab === 'closures' && <ClosureSettings />}
         {tab === 'rules' && <RuleSettings />}
+        {tab === 'info' && <LibraryInfoSettings />}
+        {tab === 'landing' && <LandingContentSettings />}
       </div>
     </>
   )

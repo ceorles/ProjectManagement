@@ -1,5 +1,6 @@
 import { RefreshCw, WifiOff } from 'lucide-react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { canOpen } from '../../utils/roles'
 import { LibraryProvider } from '../../context/LibraryProvider'
 import { useAuth } from '../../hooks/useAuth'
 import ForbiddenPage from '../../pages/shared/ForbiddenPage'
@@ -36,14 +37,18 @@ export function SplashScreen({ unreachable = false, onRetry }) {
  * send people to the login page when they really are signed out.
  */
 export function RequireAuth() {
-  const { status, retry } = useAuth()
+  const { status, retry, signedOut, lastUserId } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') return <SplashScreen />
   if (status === 'unreachable') return <SplashScreen unreachable onRetry={retry} />
   if (status === 'unauthenticated') {
-    // Remember where they were going, to return there after signing in.
-    return <Navigate to="/login" replace state={{ from: location }} />
+    // After pressing "Sign out" the next person starts fresh on their own
+    // dashboard. Otherwise (a bookmark, an expired session) remember the page,
+    // and whose it was, to return there after signing in.
+    if (signedOut) return <Navigate to="/login" replace />
+    const from = { pathname: location.pathname, search: location.search }
+    return <Navigate to="/login" replace state={{ from, userId: lastUserId }} />
   }
   return (
     <LibraryProvider>
@@ -62,17 +67,28 @@ export function RequireRole({ allow }) {
   return allow(user) ? <Outlet /> : <ForbiddenPage />
 }
 
+/**
+ * Where to go after signing in: back to the page that asked for it, but only
+ * if it belonged to this same person and their role may open it. Anyone else
+ * lands on their own role's dashboard.
+ */
+function afterSignIn(state, user) {
+  const from = state?.from
+  if (!from) return '/dashboard'
+  const sameUser = state.userId == null || state.userId === user.id
+  if (!sameUser || !canOpen(from.pathname, user)) return '/dashboard'
+  return `${from.pathname}${from.search || ''}`
+}
+
 /** Login and registration: signed-in users are sent on to the app. */
 export function GuestOnly() {
-  const { status, retry } = useAuth()
+  const { status, retry, user } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') return <SplashScreen />
   if (status === 'unreachable') return <SplashScreen unreachable onRetry={retry} />
   if (status === 'authenticated') {
-    const from = location.state?.from
-    const target = from ? `${from.pathname}${from.search || ''}` : '/dashboard'
-    return <Navigate to={target} replace />
+    return <Navigate to={afterSignIn(location.state, user)} replace />
   }
   return <Outlet />
 }

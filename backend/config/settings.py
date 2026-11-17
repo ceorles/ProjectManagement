@@ -198,6 +198,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Uploaded files (library personnel photos, landing page photos).
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / os.environ.get('MEDIA_DIR', 'media')
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

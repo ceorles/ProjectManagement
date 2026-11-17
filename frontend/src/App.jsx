@@ -1,10 +1,11 @@
 import { lazy } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import { GuestOnly, RequireAuth, RequireRole } from './components/layout/RouteGuards'
 import { AuthProvider } from './context/AuthProvider'
 import { ToastProvider } from './context/ToastProvider'
 import LoginPage from './pages/auth/LoginPage'
+import LandingPage from './pages/landing/LandingPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import NotFoundPage from './pages/shared/NotFoundPage'
 import {
@@ -43,6 +44,9 @@ export default function App() {
       <ToastProvider>
         <AuthProvider>
           <Routes>
+            {/* The public website. (The installed app skips it and opens on sign-in.) */}
+            <Route path="/" element={<LandingPage />} />
+
             <Route element={<GuestOnly />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -50,7 +54,6 @@ export default function App() {
 
             <Route element={<RequireAuth />}>
               {/* Every signed-in user */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/seats" element={<SeatBookingPage />} />
               <Route path="/rooms" element={<RoomsPage />} />

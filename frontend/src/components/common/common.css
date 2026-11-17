@@ -729,3 +729,5 @@
 .divider { height: 1px; border: 0; margin: 0; background: var(--color-border); }
 
 .list-rows > * + * { border-top: 1px solid var(--color-border); }
+
+.install-steps { display: flex; flex-direction: column; gap: 8px; padding-left: 20px; list-style: decimal; }

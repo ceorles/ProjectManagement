@@ -2,7 +2,7 @@ from datetime import time
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 
 SLOT_MINUTES = settings.RESERVATION_SLOT_MINUTES
@@ -173,3 +173,100 @@ class ReservationPolicy(models.Model):
     def load(cls):
         policy, _ = cls.objects.get_or_create(pk=1)
         return policy
+
+
+# ── Public landing page content ─────────────────────────────────────────────
+# Everything the public landing page shows (apart from the opening hours,
+# which come from OperatingHours above) is stored here and edited by the
+# Admin in Library Settings.
+
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+
+
+def validate_image_size(file):
+    if file.size > MAX_IMAGE_BYTES:
+        raise ValidationError('Images must be 5 MB or smaller.')
+
+
+class LibraryProfile(models.Model):
+    """The library's public information and contact details. A single row (pk=1)."""
+
+    name = models.CharField(max_length=80, default='DLL Library')
+    tagline = models.CharField(max_length=120, blank=True)
+    introduction = models.TextField(blank=True)
+    institution = models.CharField(max_length=150, blank=True)
+    card_note = models.CharField(
+        max_length=300, blank=True, help_text='Shown above the library card steps.')
+    rules_note = models.CharField(
+        max_length=300, blank=True, help_text='Shown above the library rules.')
+    address = models.CharField(max_length=250, blank=True)
+    phone = models.CharField(max_length=80, blank=True)
+    email = models.EmailField(blank=True)
+    facebook_page = models.CharField(max_length=100, blank=True)
+    facebook_url = models.URLField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        profile, _ = cls.objects.get_or_create(pk=1)
+        return profile
+
+
+class LandingItem(models.Model):
+    """One line of a list on the landing page: a service, a library card step or a rule."""
+
+    class Section(models.TextChoices):
+        SERVICE = 'service', 'Library services'
+        CARD = 'card', 'Library card'
+        RULE = 'rule', 'Library rules'
+
+    section = models.CharField(max_length=10, choices=Section.choices)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['section', 'order', 'id']
+
+    def __str__(self):
+        return f'{self.get_section_display()}: {self.title}'
+
+
+class LibraryPersonnel(models.Model):
+    name = models.CharField(max_length=100)
+    position = models.CharField(max_length=100)
+    photo = models.ImageField(
+        upload_to='personnel/', blank=True,
+        validators=[FileExtensionValidator(IMAGE_EXTENSIONS), validate_image_size])
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name_plural = 'library personnel'
+
+    def __str__(self):
+        return f'{self.name}, {self.position}'
+
+
+class LandingPhoto(models.Model):
+    """A photo of the library shown on the landing page."""
+
+    image = models.ImageField(
+        upload_to='landing/',
+        validators=[FileExtensionValidator(IMAGE_EXTENSIONS), validate_image_size])
+    caption = models.CharField(max_length=150, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.caption or self.image.name

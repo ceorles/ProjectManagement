@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const appName = env.VITE_APP_NAME || 'LibReserve'
+  const appName = env.VITE_APP_NAME || 'DLL Library'
 
   // During development (and `vite preview`) requests to /api are forwarded to
   // the Django server. The browser then only ever talks to one origin, so the
@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
   // same Wi-Fi without any CORS setup.
   const proxy = {
     '/api': {
+      target: env.VITE_BACKEND_ORIGIN || 'http://127.0.0.1:8000',
+      changeOrigin: true,
+    },
+    // Uploaded images (library personnel, landing page photos).
+    '/media': {
       target: env.VITE_BACKEND_ORIGIN || 'http://127.0.0.1:8000',
       changeOrigin: true,
     },
@@ -26,12 +31,14 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
         manifest: {
           id: '/',
-          name: `${appName} - Library Seat & Study Room Reservation`,
+          name: `${appName} - Seat & Study Room Reservation`,
           short_name: appName,
           description:
-            'Reserve library seats and study rooms, check in, and manage your reservations.',
+            'DLL Library of Dalubhasaan ng Lungsod ng Lucena: reserve seats, tables, computers and the study room.',
           lang: 'en',
-          start_url: '/',
+          // The installed app opens on the sign-in page (or the dashboard when
+          // already signed in), never on the public landing page.
+          start_url: '/login',
           scope: '/',
           display: 'standalone',
           orientation: 'any',
@@ -61,7 +68,7 @@ export default defineConfig(({ mode }) => {
           navigateFallback: '/index.html',
           // Never answer API or Django admin requests from the cache: every
           // booking action must reach the server and be confirmed by it.
-          navigateFallbackDenylist: [/^\/api\//, /^\/admin\//],
+          navigateFallbackDenylist: [/^\/api\//, /^\/admin\//, /^\/media\//],
           cleanupOutdatedCaches: true,
         },
       }),

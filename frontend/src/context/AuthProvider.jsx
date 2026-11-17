@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AuthContext } from './contexts'
 import { onSessionExpired, setAccessToken } from '../services/apiClient'
 import { authService } from '../services'
@@ -33,6 +33,15 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState(() => (sessionHint() ? 'loading' : 'unauthenticated'))
   const [user, setUser] = useState(null)
   const [sessionExpired, setSessionExpired] = useState(false)
+  // How the last session ended. After a deliberate sign-out nobody is sent
+  // back to the page that person was on; after an expired session only the
+  // same person is (see GuestOnly).
+  const [signedOut, setSignedOut] = useState(false)
+  const [lastUserId, setLastUserId] = useState(null)
+  const userRef = useRef(null)
+  useEffect(() => {
+    userRef.current = user
+  })
 
   const restore = useCallback(() => authService.restore().then(
     (session) => {
@@ -71,6 +80,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     onSessionExpired(() => {
       sessionHint(false)
+      setLastUserId(userRef.current?.id ?? null)
       setSessionExpired(true)
       setUser(null)
       setStatus('unauthenticated')
@@ -83,6 +93,8 @@ export function AuthProvider({ children }) {
     sessionHint(true)
     setUser(session.user)
     setSessionExpired(false)
+    setSignedOut(false)
+    setLastUserId(null)
     setStatus('authenticated')
     return session.user
   }, [])
@@ -109,6 +121,8 @@ export function AuthProvider({ children }) {
     if (userId) clearDraftsFor(userId)
     setUser(null)
     setSessionExpired(false)
+    setSignedOut(true)
+    setLastUserId(null)
     setStatus('unauthenticated')
   }, [user])
 
@@ -116,6 +130,8 @@ export function AuthProvider({ children }) {
     status,
     user,
     sessionExpired,
+    signedOut,
+    lastUserId,
     isAuthenticated: status === 'authenticated',
     isStaff: ['admin', 'librarian', 'assistant'].includes(user?.role),
     // Approve, reject, cancel and book for a student: librarians and admins only.
@@ -126,7 +142,7 @@ export function AuthProvider({ children }) {
     retry: restore,
     setUser,
     acknowledgeSessionExpired: () => setSessionExpired(false),
-  }), [status, user, sessionExpired, login, register, logout, restore])
+  }), [status, user, sessionExpired, signedOut, lastUserId, login, register, logout, restore])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

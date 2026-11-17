@@ -28,6 +28,31 @@ export const libraryService = {
   deleteFloor: (id) => api.delete(`/library/floors/${id}/`),
 }
 
+/** Turn a plain object into FormData when it contains a file to upload. */
+function withFiles(data) {
+  if (!Object.values(data).some((value) => value instanceof File)) return data
+  const form = new FormData()
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) form.append(key, value)
+  })
+  return form
+}
+
+/**
+ * The public landing page and its content in Library Settings.
+ * `resource` is 'landing-items', 'personnel' or 'photos'.
+ */
+export const landingService = {
+  public: () => api.get('/library/public/', undefined, { auth: false }),
+  profile: () => api.get('/library/profile/'),
+  saveProfile: (data) => api.patch('/library/profile/', data),
+  list: (resource, params) => api.get(`/library/${resource}/`, params),
+  create: (resource, data) => api.post(`/library/${resource}/`, withFiles(data)),
+  update: (resource, id, data) => api.patch(`/library/${resource}/${id}/`, withFiles(data)),
+  remove: (resource, id) => api.delete(`/library/${resource}/${id}/`),
+  reorder: (resource, ids) => api.post(`/library/${resource}/reorder/`, { ids }),
+}
+
 export const seatService = {
   availability: (params) => api.get('/seats/availability/', params),
   schedule: (id, date) => api.get(`/seats/${id}/schedule/`, { date }),

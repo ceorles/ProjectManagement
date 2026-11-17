@@ -1,6 +1,8 @@
-# Library Seat & Study Room Reservation Portal
+# DLL Library - Seat & Study Room Reservation Portal
 
-A real-time booking application for our school library. Students request
+A real-time booking application for DLL Library, the library of Dalubhasaan ng
+Lungsod ng Lucena. Visitors see a public website with the library's services,
+rules, personnel, hours and contact details. Students request
 seats, whole tables, computers or the study room for their preferred schedule;
 the Librarian approves or rejects each request; Student Assistants help with
 daily operations; and an administrator manages accounts, seating and rules.
@@ -56,8 +58,9 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. Requests to `/api` are forwarded to the Django
-server automatically, so no further setup is needed.
+Open **http://localhost:5173**: the public DLL Library website opens first, and
+**Login** leads into the portal. Requests to `/api` (and uploaded images under
+`/media`) are forwarded to the Django server automatically.
 
 ### Demo accounts
 
@@ -153,8 +156,9 @@ themselves.)
 |---|---|---|
 | `VITE_API_BASE_URL` | Where the app sends API requests | `/api` |
 | `VITE_BACKEND_ORIGIN` | Django server that `/api` is forwarded to in dev/preview | `http://127.0.0.1:8000` |
-| `VITE_APP_NAME` | Name shown in the app and when installed | `LibReserve` |
-| `VITE_INSTITUTION_NAME` | Shown under the app name | `University Library` |
+| `VITE_APP_NAME` | Name shown in the app and when installed | `DLL Library` |
+| `VITE_APP_SUBTITLE` | Shown under the name in the logo | `Reservation Portal` |
+| `VITE_INSTITUTION_NAME` | The school, shown on the sign-in page | `Dalubhasaan ng Lungsod ng Lucena` |
 
 The backend address is defined once, in these variables. No component contains a URL.
 
@@ -162,13 +166,26 @@ The backend address is defined once, in these variables. No component contains a
 
 ## 4. Installing the app (PWA)
 
-The portal can be installed and opened like a native app.
+DLL Library can be installed and opened like a native app.
 
-- **Android (Chrome/Edge):** open the site, then menu > **Install app** (or use
-  the **Install app** button in the sidebar or on the Profile page).
-- **iPhone/iPad (Safari):** Share > **Add to Home Screen**.
-- **Desktop (Chrome/Edge):** the install icon in the address bar, or the
-  **Install app** button in the sidebar.
+- Press **Install** on the website header, or **Install app** in the sidebar
+  (every role has it). When the browser offers installation, its own install
+  dialog opens. When it does not (Safari, or a browser that has not offered it
+  yet), the button shows the steps instead:
+  - **Android (Chrome/Edge):** menu > **Install app**.
+  - **iPhone/iPad (Safari):** Share > **Add to Home Screen**.
+  - **Desktop (Chrome/Edge):** the install icon in the address bar.
+- The button is hidden while running as the installed app.
+
+How the installed app behaves:
+
+- It opens on the **login page**, not the public website, and the login page
+  has no Back button. A signed-in user goes straight to their dashboard.
+- It **stays signed in** after being closed or minimised. The sign-in is kept
+  in a secure HttpOnly cookie (not readable by page scripts) for
+  `REFRESH_TOKEN_DAYS` (7 days by default, renewed while the app is used). It
+  ends when the user signs out, the session expires, or the Admin deactivates
+  the account.
 
 Things to know:
 
@@ -182,6 +199,31 @@ Things to know:
   clearly that it is offline. It never shows cached availability as if it were
   live, and it never pretends a reservation succeeded: creating, cancelling and
   checking in all require an answer from the server.
+
+---
+
+## 4b. The public website (landing page)
+
+`/` is the public DLL Library website, built from the library's information
+board: Home, Our Services, About (library card, rules, personnel) and Contact
+(library hours, address, telephone, Facebook page), with **Install** and
+**Login** in the header. It is readable without signing in.
+
+Everything on it comes from the database:
+
+- **Library Settings > Library information**: name, school, tagline,
+  introduction, address, telephone, email, Facebook page, and optional notes
+  above the card and rules lists.
+- **Library Settings > Landing page**: services, library card steps, rules,
+  personnel (with optional photos) and library photos. Add, edit, reorder and
+  remove; changes appear on the website immediately. The first library photo
+  is also the background of the top banner.
+- **Library Settings > Opening hours**: the website shows the same hours that
+  reservations use.
+
+Only the Admin can change this content; the server refuses changes from
+anyone else. Photos are JPG, PNG or WebP up to 5 MB and are stored in
+`backend/media/`.
 
 ---
 
@@ -360,6 +402,10 @@ for a taken seat is refused.
 | `OperatingHours` (library) | Opening hours for one weekday (7 rows) | |
 | `Closure` (library) | A date the library is closed | |
 | `ReservationPolicy` (library) | The booking rules (single row) | |
+| `LibraryProfile` (library) | Name, introduction and contact details for the website (single row) | |
+| `LandingItem` (library) | One service, library card step or rule on the website | |
+| `LibraryPersonnel` (library) | A staff member shown on the website, with an optional photo | |
+| `LandingPhoto` (library) | A photo of the library shown on the website | |
 | `Zone` (seats) | A seating area: Reading Hall or Computer Area | belongs to a floor; has many seats |
 | `Seat` (seats) | One chair or computer, with its table number, map position, features and status | belongs to a zone |
 | `Facility` (study_rooms) | Equipment such as a whiteboard | many-to-many with rooms |
@@ -397,6 +443,7 @@ health requires `Authorization: Bearer <access token>`.
 | Auth | `POST auth/register/`, `POST auth/login/`, `POST auth/refresh/`, `POST auth/logout/`, `GET/PATCH auth/me/`, `POST auth/change-password/` |
 | Users (admin) | `GET/POST users/`, `GET/PATCH users/{id}/`, `POST users/{id}/activate/`, `deactivate/`, `set-password/`; `GET users/students/` (staff), `GET users/lookup/` |
 | Library | `GET library/overview/`, `GET/PUT library/hours/`, `GET/PATCH library/policy/`, `library/closures/`, `library/floors/` |
+| Website | `GET library/public/` (no sign-in), Admin: `GET/PATCH library/profile/`, `library/landing-items/`, `library/personnel/`, `library/photos/` (CRUD, `POST .../reorder/`) |
 | Seats | `GET seats/availability/?date&start&end`, `GET seats/{id}/schedule/?date`, `seats/` and `seats/zones/` (CRUD), `POST seats/{id}/set-status/` |
 | Study room | `GET study-rooms/availability/?date&start&end`, `GET study-rooms/{id}/schedule/?date`, `GET study-rooms/` |
 | Reservations | `GET/POST reservations/` (`seats: [ids]` or `room`), `GET reservations/{id}/`, `POST reservations/{id}/approve/`, `reject/`, `cancel/`, `check-in/`, `check-out/`, `no-show/`; `GET reservations/lookup/?code`, `GET reservations/limits/` |
@@ -443,4 +490,6 @@ Lists are paginated: `{ "count", "next", "previous", "results" }`.
 4. Serve both from the same domain over HTTPS (frontend at `/`, API at `/api/`),
    or set `VITE_API_BASE_URL` and `CORS_ALLOWED_ORIGINS` if they are on
    different domains.
-5. Schedule `python manage.py process_reservations` every minute.
+5. Serve uploaded files from `backend/media/` at `/media/` (personnel and
+   library photos). Django only serves them itself when `DJANGO_DEBUG=True`.
+6. Schedule `python manage.py process_reservations` every minute.

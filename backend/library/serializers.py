@@ -1,7 +1,10 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from .models import Closure, Floor, OperatingHours, ReservationPolicy
+from .models import (
+    Closure, Floor, LandingItem, LandingPhoto, LibraryPersonnel, LibraryProfile, OperatingHours,
+    ReservationPolicy,
+)
 from .services import local_today
 
 
@@ -69,3 +72,46 @@ class ReservationPolicySerializer(serializers.ModelSerializer):
         except DjangoValidationError as exc:
             raise serializers.ValidationError(exc.message_dict) from exc
         return attrs
+
+
+# ── Public landing page content ─────────────────────────────────────────────
+
+class RelativeImageField(serializers.ImageField):
+    """
+    Returns '/media/...' rather than an absolute URL, so images load through
+    whatever host the visitor used (the dev proxy, a phone on the LAN, ...).
+    """
+
+    def to_representation(self, value):
+        return value.url if value else None
+
+
+class LibraryProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LibraryProfile
+        exclude = ['id']
+        read_only_fields = ['updated_at']
+
+
+class LandingItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LandingItem
+        fields = ['id', 'section', 'title', 'description', 'order']
+
+
+class LibraryPersonnelSerializer(serializers.ModelSerializer):
+    photo = RelativeImageField(
+        required=False, allow_null=True,
+        validators=LibraryPersonnel._meta.get_field('photo').validators)
+
+    class Meta:
+        model = LibraryPersonnel
+        fields = ['id', 'name', 'position', 'photo', 'order']
+
+
+class LandingPhotoSerializer(serializers.ModelSerializer):
+    image = RelativeImageField(validators=LandingPhoto._meta.get_field('image').validators)
+
+    class Meta:
+        model = LandingPhoto
+        fields = ['id', 'image', 'caption', 'order']

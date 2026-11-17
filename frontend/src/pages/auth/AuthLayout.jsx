@@ -1,4 +1,5 @@
-import { Armchair, CalendarCheck, DoorOpen, ScanLine } from 'lucide-react'
+import { ArrowLeft, Armchair, CalendarCheck, DoorOpen, ScanLine } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { APP_NAME, INSTITUTION_NAME } from '../../config'
 import Logo from '../../components/layout/Logo'
 import './auth.css'
@@ -11,7 +12,7 @@ const HIGHLIGHTS = [
 ]
 
 /** Two-panel layout for the sign-in and registration pages. */
-export default function AuthLayout({ title, subtitle, children, footer, wide = false }) {
+export default function AuthLayout({ title, subtitle, children, footer, wide = false, back }) {
   return (
     <div className="auth">
       <aside className="auth__panel">
@@ -19,7 +20,7 @@ export default function AuthLayout({ title, subtitle, children, footer, wide = f
         <div className="auth__pitch">
           <h2>Your place in the library, reserved.</h2>
           <p>
-            {APP_NAME} is the seat and study room reservation portal of the {INSTITUTION_NAME}.
+            {APP_NAME} is the seat and study room reservation portal of {INSTITUTION_NAME}.
           </p>
           <ul className="auth__highlights">
             {HIGHLIGHTS.map((item) => (
@@ -38,6 +39,11 @@ export default function AuthLayout({ title, subtitle, children, footer, wide = f
 
       <main className="auth__main">
         <div className={`auth__card ${wide ? 'auth__card--wide' : ''}`}>
+          {back && (
+            <Link to={back.to} className="auth__back">
+              <ArrowLeft size={15} aria-hidden="true" /> {back.label}
+            </Link>
+          )}
           <div className="auth__mobile-logo"><Logo size={40} /></div>
           <h1 className="auth__title">{title}</h1>
           <p className="auth__subtitle">{subtitle}</p>
