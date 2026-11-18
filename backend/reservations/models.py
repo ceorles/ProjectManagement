@@ -8,8 +8,9 @@ from study_rooms.models import StudyRoom
 
 class Reservation(models.Model):
     """
-    A request by one student for seats (one to six, e.g. a whole table), one
-    computer, or the study room, for a time window.
+    A request by one student for seats (one to six, e.g. a whole table) or one
+    computer, for a time window. (The room fields only keep the history of
+    earlier room bookings: rooms can no longer be reserved.)
 
     Status flow:
 

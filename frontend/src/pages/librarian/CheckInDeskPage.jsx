@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Hourglass, ScanLine, Search, UserCheck } from 'lucide-react'
+import { Hourglass, QrCode, ScanLine, Search, UserCheck } from 'lucide-react'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
 import { EmptyState, QueryBoundary } from '../../components/common/Feedback'
 import { FormError } from '../../components/common/FormControls'
 import PageHeader from '../../components/common/PageHeader'
+import QrScannerDialog from '../../components/reservations/QrScannerDialog'
 import ReservationCard from '../../components/reservations/ReservationCard'
 import '../../components/reservations/reservations.css'
 import { POLL } from '../../config'
@@ -14,13 +15,14 @@ import { reportService, reservationService } from '../../services'
 /**
  * The librarian's desk. Type the code a student shows (or scan its QR code
  * with a handheld scanner, which types it into the box) to bring up the
- * reservation and confirm the check-in.
+ * reservation and confirm the check-in, or scan the QR code with the camera.
  */
 export default function CheckInDeskPage() {
   const [code, setCode] = useState('')
   const [found, setFound] = useState(null)
   const [error, setError] = useState(null)
   const [searching, setSearching] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const lists = useApiQuery(reportService.staffDashboard, [], {
     interval: POLL.reservations, keepPrevious: true,
   })
@@ -52,6 +54,19 @@ export default function CheckInDeskPage() {
     }
   }
 
+  // Show the reservation the camera just read, as the server now has it.
+  const showScanned = async (reservation) => {
+    setCode(reservation.code)
+    setError(null)
+    setFound(reservation)
+    lists.refetch()
+    try {
+      setFound(await reservationService.get(reservation.id))
+    } catch {
+      // The reservation already shown is the latest one available.
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -69,6 +84,9 @@ export default function CheckInDeskPage() {
               />
               <Button type="submit" size="lg" icon={Search} loading={searching} disabled={!code.trim()}>
                 Find
+              </Button>
+              <Button variant="secondary" size="lg" icon={QrCode} onClick={() => setScanning(true)}>
+                Scan QR Code
               </Button>
             </form>
             <FormError error={error} />
@@ -118,6 +136,7 @@ export default function CheckInDeskPage() {
           )}
         </QueryBoundary>
       </div>
+      {scanning && <QrScannerDialog onClose={() => setScanning(false)} onScanned={showScanned} />}
     </>
   )
 }

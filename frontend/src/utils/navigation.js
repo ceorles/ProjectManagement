@@ -1,5 +1,5 @@
 import {
-  Armchair, Bell, CalendarCheck, ChartColumn, ClipboardList, DoorOpen, LayoutDashboard,
+  Armchair, Bell, CalendarCheck, ChartColumn, ClipboardList, LayoutDashboard,
   ScanLine, ScrollText, Settings, SlidersHorizontal, User, Users,
 } from 'lucide-react'
 
@@ -23,7 +23,6 @@ export function navigationFor(user) {
         items: [
           { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { to: '/seats', label: 'Reserve a Seat', icon: Armchair },
-          { to: '/rooms', label: 'Study Room', icon: DoorOpen },
           { to: '/reservations', label: 'My Reservations', icon: CalendarCheck },
         ],
       },
@@ -39,7 +38,6 @@ export function navigationFor(user) {
         { to: '/desk', label: 'Check-in Desk', icon: ScanLine },
         { to: '/manage/reservations', label: 'Reservations', icon: ClipboardList },
         { to: '/seats', label: 'Seat Map', icon: Armchair },
-        { to: '/rooms', label: 'Study Room', icon: DoorOpen },
         // Reports are for librarians and admins, not student assistants.
         ...(user.role === 'assistant' ? [] : [{ to: '/reports', label: 'Reports', icon: ChartColumn }]),
       ],

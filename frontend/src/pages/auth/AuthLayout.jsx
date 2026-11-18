@@ -1,4 +1,4 @@
-import { ArrowLeft, Armchair, CalendarCheck, DoorOpen, ScanLine } from 'lucide-react'
+import { ArrowLeft, Armchair, CalendarCheck, Monitor, ScanLine } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { APP_NAME, INSTITUTION_NAME } from '../../config'
 import Logo from '../../components/layout/Logo'
@@ -6,7 +6,7 @@ import './auth.css'
 
 const HIGHLIGHTS = [
   { icon: Armchair, title: 'Pick your seat', text: 'See the floor map and choose a seat that is free when you need it.' },
-  { icon: DoorOpen, title: 'Book a study room', text: 'Reserve a room for your group, with the facilities you need.' },
+  { icon: Monitor, title: 'Reserve a computer', text: 'Book one of the library computers for the time you need.' },
   { icon: CalendarCheck, title: 'Live availability', text: 'What you see is what is free right now. No double bookings.' },
   { icon: ScanLine, title: 'Quick check-in', text: 'Check in from your phone or show your code at the desk.' },
 ]
@@ -20,7 +20,7 @@ export default function AuthLayout({ title, subtitle, children, footer, wide = f
         <div className="auth__pitch">
           <h2>Your place in the library, reserved.</h2>
           <p>
-            {APP_NAME} is the seat and study room reservation portal of {INSTITUTION_NAME}.
+            {APP_NAME} is the seat and computer reservation portal of {INSTITUTION_NAME}.
           </p>
           <ul className="auth__highlights">
             {HIGHLIGHTS.map((item) => (

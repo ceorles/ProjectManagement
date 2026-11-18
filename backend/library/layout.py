@@ -6,6 +6,8 @@ One floor (First Floor) with two areas:
 * Reading Hall  - 15 tables, 6 chairs each = 90 seats
 * Computer Area - 4 computers
 
+The library's one room is a common space for everyone and is not reservable.
+
 `apply_library_layout()` brings any database to exactly that. It is safe to
 run more than once. Floors, zones, seats and rooms that are not part of the
 real library are *archived*, never deleted, so reservation history survives.
@@ -127,25 +129,8 @@ def apply_library_layout():
         ])
         summary['seats_created'] += COMPUTERS
 
-    # ── The library has a single room ────────────────────────────────────────
-    from reservations.services import cancel_for_resource
-
-    rooms = list(StudyRoom.objects.order_by('code'))
-    for room in rooms[1:]:
-        summary['reservations_cancelled'] += cancel_for_resource(
-            room, actor=None, reason='This room is no longer part of the library.')
-        room.is_archived = True
-        room.save(update_fields=['is_archived'])
-        summary['rooms_archived'] += 1
-    if rooms and rooms[0].floor_id != floor.pk:
-        # It was recorded on a floor that does not exist: it is the one room
-        # on the First Floor.
-        room = rooms[0]
-        room.floor = floor
-        room.name = 'Study Room'
-        if not StudyRoom.all_objects.filter(code='SR-101').exclude(pk=room.pk).exists():
-            room.code = 'SR-101'
-        room.save(update_fields=['floor', 'name', 'code'])
+    # ── Rooms are not reservable: keep them only for past reservations ───────
+    summary['rooms_archived'] = StudyRoom.objects.update(is_archived=True)
 
     # ── Floors that do not exist ─────────────────────────────────────────────
     summary['floors_archived'] = Floor.objects.exclude(pk=floor.pk).update(is_archived=True)

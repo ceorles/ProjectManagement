@@ -18,7 +18,7 @@ function niceScale(maxValue) {
 /**
  * Column chart, stacked when there is more than one series.
  *
- *   data:   [{ label, title, values: { seat: 4, room: 1 } }]
+ *   data:   [{ label, title, values: { seat: 4, computer: 1 } }]
  *   series: [{ key, label, color }]
  *
  * - One y-axis, starting at zero.

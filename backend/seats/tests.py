@@ -66,9 +66,16 @@ class SeatManagementTests(PortalTestCase):
         with frozen_time(at(hour=9)):
             reservation = self.book_seat()
             self.login_as(self.admin)
-            response = self.client.post(
-                f'/api/seats/{self.seat.pk}/set-status/',
-                {'status': 'maintenance', 'note': 'Broken armrest'})
+            url = f'/api/seats/{self.seat.pk}/set-status/'
+            body = {'status': 'maintenance', 'note': 'Broken armrest'}
+            # Nothing is cancelled until the user has confirmed it.
+            refused = self.client.post(url, body)
+            self.assertEqual(refused.status_code, 409)
+            self.assertEqual(self.error_code(refused), 'reservations_affected')
+            reservation.refresh_from_db()
+            self.assertEqual(reservation.status, Reservation.Status.CONFIRMED)
+
+            response = self.client.post(url, {**body, 'confirm_cancellations': True})
             self.assertEqual(response.status_code, 200, response.data)
             self.assertEqual(response.data['cancelled_reservations'], 1)
             reservation.refresh_from_db()

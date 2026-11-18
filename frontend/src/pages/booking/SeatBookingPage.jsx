@@ -129,7 +129,7 @@ export default function SeatBookingPage() {
 
       <div className="stack">
         <Card title="1. When do you need it?" icon={Armchair}>
-          <BookingWindowPicker resourceType="seat" window={window} onChange={setWindow} />
+          <BookingWindowPicker window={window} onChange={setWindow} />
         </Card>
 
         <Card

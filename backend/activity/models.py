@@ -9,7 +9,7 @@ class ActivityLog(models.Model):
         AUTH = 'auth', 'Authentication'
         USER = 'user', 'Accounts'
         RESERVATION = 'reservation', 'Reservations'
-        RESOURCE = 'resource', 'Seats and rooms'
+        RESOURCE = 'resource', 'Seats'
         SETTINGS = 'settings', 'Library settings'
 
     # Null actor = the system itself (for example an automatic no-show).

@@ -61,23 +61,13 @@ export const seatService = {
   update: (id, data) => api.patch(`/seats/${id}/`, data),
   remove: (id) => api.delete(`/seats/${id}/`),
   setStatus: (id, data) => api.post(`/seats/${id}/set-status/`, data),
+  affectedReservations: (id) => api.get(`/seats/${id}/affected-reservations/`),
+  tables: (zone) => api.get('/seats/tables/', { zone }),
+  setTableStatus: (data) => api.post('/seats/tables/set-status/', data),
   zones: (params) => api.get('/seats/zones/', params),
   createZone: (data) => api.post('/seats/zones/', data),
   updateZone: (id, data) => api.patch(`/seats/zones/${id}/`, data),
   deleteZone: (id) => api.delete(`/seats/zones/${id}/`),
-}
-
-export const roomService = {
-  availability: (params) => api.get('/study-rooms/availability/', params),
-  schedule: (id, date) => api.get(`/study-rooms/${id}/schedule/`, { date }),
-  list: (params) => api.get('/study-rooms/', params),
-  get: (id) => api.get(`/study-rooms/${id}/`),
-  create: (data) => api.post('/study-rooms/', data),
-  update: (id, data) => api.patch(`/study-rooms/${id}/`, data),
-  remove: (id) => api.delete(`/study-rooms/${id}/`),
-  setStatus: (id, data) => api.post(`/study-rooms/${id}/set-status/`, data),
-  facilities: () => api.get('/study-rooms/facilities/'),
-  createFacility: (name) => api.post('/study-rooms/facilities/', { name }),
 }
 
 export const reservationService = {
@@ -110,7 +100,6 @@ export const userService = {
   deactivate: (id) => api.post(`/users/${id}/deactivate/`),
   setPassword: (id, new_password) => api.post(`/users/${id}/set-password/`, { new_password }),
   searchStudents: (search) => api.get('/users/students/', { search }),
-  lookupStudent: (student_id) => api.get('/users/lookup/', { student_id }),
 }
 
 export const reportService = {

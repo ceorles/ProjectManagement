@@ -51,6 +51,10 @@ class Seat(Archivable):
     status = models.CharField(
         max_length=20, choices=ResourceStatus.choices, default=ResourceStatus.ACTIVE)
     status_note = models.CharField(max_length=200, blank=True)
+    # True while the seat is out of service only because its whole table is.
+    # Restoring the table restores these seats, and never a seat that was
+    # individually out of service.
+    out_with_table = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

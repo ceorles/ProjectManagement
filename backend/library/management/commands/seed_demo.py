@@ -17,13 +17,12 @@ from django.utils import timezone
 
 from config.exceptions import ApiError
 from library.layout import apply_library_layout
-from library.models import Floor, ResourceStatus
+from library.models import CHECKIN_GRACE_MINUTES, Floor, ResourceStatus
 from library.services import get_day_schedule, get_policy, local_now, local_today
 from reservations import services
 from reservations.models import Reservation, ReservationSeat
 from reservations.windows import SLOT_MINUTES, build_window
 from seats.models import Seat
-from study_rooms.models import Facility, StudyRoom
 from users.models import User
 
 DEFAULT_PASSWORD = 'LibraryDemo#2026'
@@ -75,7 +74,6 @@ class Command(BaseCommand):
             self.stdout.write(f'Library layout updated: { {k: v for k, v in layout.items() if v} }')
         with transaction.atomic():
             staff, students = self._accounts(password)
-            self._room()
 
         if not options['no_history']:
             # History is generated once for the current seats. Reservations on
@@ -102,8 +100,7 @@ class Command(BaseCommand):
             f'Layout: {", ".join(Floor.objects.values_list("name", flat=True))} | '
             f'{Seat.objects.filter(has_computer=False).count()} seats at '
             f'{Seat.objects.exclude(table_number=None).values("table_number").distinct().count()} '
-            f'tables | {Seat.objects.filter(has_computer=True).count()} computers | '
-            f'{StudyRoom.objects.count()} study room')
+            f'tables | {Seat.objects.filter(has_computer=True).count()} computers')
         self.stdout.write(f'\nDemo accounts (password for newly created ones: {password})')
         self.stdout.write('  Admin              admin@library.edu')
         self.stdout.write('  Librarian          librarian@library.edu   (may manage seats)')
@@ -141,24 +138,11 @@ class Command(BaseCommand):
             students.append(user)
         return staff, students
 
-    def _room(self):
-        """The library's one room, if the database does not have it yet."""
-        if StudyRoom.objects.exists():
-            return
-        room = StudyRoom.objects.create(
-            code='SR-101', name='Study Room', floor=Floor.objects.first(), capacity=6,
-            min_occupancy=2, description='The library\'s study room for small group work.')
-        room.facilities.set([
-            Facility.objects.get_or_create(name=name)[0]
-            for name in ('Whiteboard', 'Power outlets', 'Air conditioning')
-        ])
-
     # ── Past reservations (for history and reports) ────────────────────────
 
     def _history(self, students, librarian):
         seats = list(Seat.objects.filter(status=ResourceStatus.ACTIVE, has_computer=False))
         computers = list(Seat.objects.filter(status=ResourceStatus.ACTIVE, has_computer=True))
-        rooms = list(StudyRoom.objects.filter(status=ResourceStatus.ACTIVE))
         if not seats:
             return 0
         by_table = {}
@@ -184,13 +168,8 @@ class Command(BaseCommand):
             for _ in range(self.rng.randint(24, 40)):
                 student = self.rng.choice(students)
                 roll = self.rng.random()
-                room = self.rng.choice(rooms) if rooms and roll < 0.08 else None
                 reason = ''
-                if room:
-                    chosen = []
-                    slots = self.rng.choice([2, 2, 3, 4])
-                    reason = self.rng.choice(['Group project', 'Thesis meeting', 'Exam review'])
-                elif roll < 0.20 and computers:
+                if roll < 0.20 and computers:
                     chosen = [self.rng.choice(computers)]
                     slots = self.rng.choice([1, 2, 2])
                 elif roll < 0.32:
@@ -210,8 +189,7 @@ class Command(BaseCommand):
                 first = min(latest, max(0, int(self.rng.triangular(0, latest, latest * 0.45))))
                 wanted = range(first, first + slots)
                 keys = [('u', student.pk, slot) for slot in wanted]
-                keys += [('r', room.pk, slot) for slot in wanted] if room else [
-                    ('s', seat.pk, slot) for seat in chosen for slot in wanted]
+                keys += [('s', seat.pk, slot) for seat in chosen for slot in wanted]
                 if any(key in busy for key in keys):
                     continue
                 busy.update(keys)
@@ -246,13 +224,9 @@ class Command(BaseCommand):
 
                 records.append((Reservation(
                     code=services.generate_code(), student=student,
-                    resource_type='room' if room else 'seat',
-                    seat=chosen[0] if chosen else None, room=room,
+                    resource_type='seat', seat=chosen[0],
                     start_at=start, end_at=end, status=status, created_by=student,
-                    participant_count=(
-                        self.rng.randint(room.min_occupancy, room.capacity) if room
-                        else len(chosen)),
-                    purpose=reason, **extra,
+                    participant_count=len(chosen), purpose=reason, **extra,
                 ), chosen, created))
 
         # Codes are random; make sure the batch has no duplicates.
@@ -287,6 +261,8 @@ class Command(BaseCommand):
 
         slot_start = now.replace(
             minute=now.minute - now.minute % SLOT_MINUTES, second=0, microsecond=0)
+        if now - slot_start >= timedelta(minutes=CHECKIN_GRACE_MINUTES):
+            slot_start += timedelta(minutes=SLOT_MINUTES)  # too late for this slot
         seats = list(Seat.objects.filter(
             status=ResourceStatus.ACTIVE, has_computer=False).order_by('?')[:12])
         computers = list(Seat.objects.filter(status=ResourceStatus.ACTIVE, has_computer=True))

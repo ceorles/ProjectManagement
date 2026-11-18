@@ -142,21 +142,9 @@ class AutomaticLifecycleTests(PortalTestCase):
             self.assertEqual(reservation.status, Status.NO_SHOW)
             self.assertFalse(reservation.slots.exists())
             self.assertTrue(Notification.objects.filter(
-                user=self.student, title='Reservation marked as no-show').exists())
-            # The released seat is immediately bookable for the slot in progress.
-            self.book_seat(student=self.other_student, start_hour=11)
-
-    def test_walk_in_grace_period_counts_from_the_booking_time(self):
-        with frozen_time(at(hour=11, minute=20)):
-            reservation = self.book_seat(start_hour=11)  # slot already in progress
-        with frozen_time(at(hour=11, minute=30)):
-            services.process_due_reservations()
-            reservation.refresh_from_db()
-            self.assertEqual(reservation.status, Status.CONFIRMED)
-        with frozen_time(at(hour=11, minute=36)):
-            services.process_due_reservations()
-            reservation.refresh_from_db()
-            self.assertEqual(reservation.status, Status.NO_SHOW)
+                user=self.student, title='Reservation automatically cancelled').exists())
+            # The released seat is immediately bookable for the remaining time.
+            self.book_seat(student=self.other_student, start_hour=11, start_minute=30)
 
     def test_checked_in_reservation_completes_at_its_end_time(self):
         with frozen_time(at(hour=9)):

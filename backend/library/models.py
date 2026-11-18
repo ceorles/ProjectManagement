@@ -7,6 +7,10 @@ from django.db import models
 
 SLOT_MINUTES = settings.RESERVATION_SLOT_MINUTES
 
+# A confirmed reservation nobody has checked in to is cancelled automatically
+# this many minutes after its start time. A fixed library rule, not a setting.
+CHECKIN_GRACE_MINUTES = 15
+
 
 class ResourceStatus(models.TextChoices):
     """Shared by seats and study rooms."""
@@ -121,8 +125,6 @@ class ReservationPolicy(models.Model):
         default=30, validators=[MinValueValidator(SLOT_MINUTES), _slot_multiple])
     max_seat_duration_minutes = models.PositiveSmallIntegerField(
         default=240, validators=[MinValueValidator(SLOT_MINUTES), _slot_multiple])
-    max_room_duration_minutes = models.PositiveSmallIntegerField(
-        default=120, validators=[MinValueValidator(SLOT_MINUTES), _slot_multiple])
     max_advance_days = models.PositiveSmallIntegerField(
         default=7, validators=[MaxValueValidator(60)],
         help_text='How many days ahead a reservation can be made. 0 = same day only.')
@@ -134,9 +136,6 @@ class ReservationPolicy(models.Model):
     checkin_early_minutes = models.PositiveSmallIntegerField(
         default=10, validators=[MaxValueValidator(60)],
         help_text='How long before the start time check-in opens.')
-    checkin_grace_minutes = models.PositiveSmallIntegerField(
-        default=15, validators=[MinValueValidator(5), MaxValueValidator(120)],
-        help_text='Minutes after the start time before a reservation becomes a no-show.')
     cancellation_cutoff_minutes = models.PositiveSmallIntegerField(
         default=0, validators=[MaxValueValidator(1440)],
         help_text='Students must cancel at least this long before the start time.')
@@ -157,10 +156,14 @@ class ReservationPolicy(models.Model):
     def __str__(self):
         return 'Reservation policy'
 
+    @property
+    def checkin_grace_minutes(self):
+        return CHECKIN_GRACE_MINUTES
+
     def clean(self):
-        for field in ('max_seat_duration_minutes', 'max_room_duration_minutes'):
-            if getattr(self, field) < self.min_duration_minutes:
-                raise ValidationError({field: 'Cannot be shorter than the minimum duration.'})
+        if self.max_seat_duration_minutes < self.min_duration_minutes:
+            raise ValidationError(
+                {'max_seat_duration_minutes': 'Cannot be shorter than the minimum duration.'})
 
     def save(self, *args, **kwargs):
         self.pk = 1

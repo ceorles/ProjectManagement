@@ -7,15 +7,15 @@ import ConfirmDialog from '../../components/common/ConfirmDialog'
 import DataTable from '../../components/common/DataTable'
 import { EmptyState, QueryBoundary } from '../../components/common/Feedback'
 import PageHeader from '../../components/common/PageHeader'
-import ResourceStatusDialog from '../../components/common/ResourceStatusDialog'
-import '../../components/rooms/rooms.css'
 import { SeatFormModal, ZoneFormModal } from '../../components/seats/SeatForms'
 import SeatMap from '../../components/seats/SeatMap'
+import SeatStatusDialog from '../../components/seats/SeatStatusDialog'
+import TableStatusDialog from '../../components/seats/TableStatusDialog'
 import '../../components/seats/seats.css'
 import { useAction } from '../../hooks/useAction'
 import { useApiQuery } from '../../hooks/useApiQuery'
 import { libraryService, seatService } from '../../services'
-import { RESOURCE_STATUS, SEAT_FEATURES, ZONE_TYPES } from '../../utils/constants'
+import { RESOURCE_STATUS, SEAT_FEATURES, TABLE_STATE, ZONE_TYPES } from '../../utils/constants'
 
 /** Admins (and librarians the admin has allowed) maintain zones and seats here. */
 export default function ManageSeatsPage() {
@@ -29,6 +29,11 @@ export default function ManageSeatsPage() {
     () => seatService.list({ zone: zone.id, page_size: 200 }), [zone?.id],
     { enabled: Boolean(zone), keepPrevious: true },
   )
+  // Each table's state, worked out by the server from its seats and reservations.
+  const tables = useApiQuery(
+    () => seatService.tables(zone.id), [zone?.id],
+    { enabled: Boolean(zone), keepPrevious: true },
+  )
 
   const close = () => setDialog(null)
   const reload = () => {
@@ -36,6 +41,7 @@ export default function ManageSeatsPage() {
     floors.refetch()
     zones.refetch()
     seats.refetch()
+    tables.refetch()
   }
 
   const [removeSeat, removingSeat] = useAction((seat) => seatService.remove(seat.id), {
@@ -48,10 +54,11 @@ export default function ManageSeatsPage() {
   const columns = [
     { key: 'number', header: 'Seat', primary: true, render: (seat) => <span className="strong">{seat.number}</span> },
     {
-      key: 'table', header: 'Table',
-      render: (seat) => (seat.table_number ? `Table ${seat.table_number}` : <span className="muted">-</span>),
+      key: 'position', header: 'Position',
+      render: (seat) => (seat.table_number && seat.number.includes('-')
+        ? `Chair ${seat.number.split('-').pop()}`
+        : `Row ${seat.row}, column ${seat.col}`),
     },
-    { key: 'position', header: 'Position', render: (seat) => `Row ${seat.row}, column ${seat.col}` },
     {
       key: 'features', header: 'Features',
       render: (seat) => {
@@ -146,9 +153,43 @@ export default function ManageSeatsPage() {
                           })),
                         }}
                         onSelect={(seat) => setDialog({ type: 'seat', seat })}
+                        onSelectTable={(table) => setDialog({ type: 'table', number: table.number })}
+                        tablesAlwaysEnabled
                       />
                     </div>
-                    <DataTable columns={columns} rows={data.results} caption={`Seats in ${zone.name}`} />
+                    {(tables.data ?? []).length > 0 && (
+                      <div className="table-groups">
+                        {tables.data.map((table) => {
+                          const state = TABLE_STATE[table.state]
+                          const rows = data.results.filter((seat) => seat.table_number === table.table_number)
+                          return (
+                            <section key={table.table_number} className="table-group"
+                              aria-label={`Table ${table.table_number}`}>
+                              <header className="table-group__header">
+                                <h3 className="table-group__title">Table {table.table_number}</h3>
+                                <Badge tone={state.tone} dot>{state.label}</Badge>
+                                <span className="table-group__meta">
+                                  {table.available_seats} of {table.total_seats} in service
+                                  {table.reservations.length > 0
+                                    && ` · ${table.reservations.length} reservation${table.reservations.length === 1 ? '' : 's'}`}
+                                </span>
+                                <span className="table-group__action">
+                                  <Button size="sm" variant="secondary" icon={Wrench}
+                                    onClick={() => setDialog({ type: 'table', number: table.table_number })}>
+                                    Manage table
+                                  </Button>
+                                </span>
+                              </header>
+                              <DataTable columns={columns} rows={rows} caption={`Seats of table ${table.table_number}`} />
+                            </section>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {data.results.some((seat) => !seat.table_number) && (
+                      <DataTable columns={columns} rows={data.results.filter((seat) => !seat.table_number)}
+                        caption={`Seats in ${zone.name}`} />
+                    )}
                   </>
                 ))}
               </QueryBoundary>
@@ -165,10 +206,10 @@ export default function ManageSeatsPage() {
         <SeatFormModal seat={dialog.seat} zone={zone} onClose={close} onSaved={reload} />
       )}
       {dialog?.type === 'status' && (
-        <ResourceStatusDialog
-          name={`Seat ${dialog.seat.number}`} current={dialog.seat.status} note={dialog.seat.status_note}
-          save={(data) => seatService.setStatus(dialog.seat.id, data)} onClose={close} onSaved={reload}
-        />
+        <SeatStatusDialog seat={dialog.seat} onClose={close} onSaved={reload} />
+      )}
+      {dialog?.type === 'table' && (
+        <TableStatusDialog zoneId={zone.id} tableNumber={dialog.number} onClose={close} onSaved={reload} />
       )}
       <ConfirmDialog
         open={dialog?.type === 'delete-seat'} onClose={close} busy={removingSeat}

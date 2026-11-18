@@ -161,7 +161,7 @@ class ConflictTests(PortalTestCase):
                 self.book_seat(seat=self.seat2, start_hour=12, hours=1)
             self.assertEqual(caught.exception.detail.code, 'student_conflict')
             with self.assertRaises(ConflictError):
-                self.book_room(start_hour=11, hours=1)
+                self.book_seat(seat=self.computer, start_hour=11, hours=1)
 
     def test_database_rejects_a_double_booking_even_without_the_service_checks(self):
         """The unique slot constraint is the last line of defence against races."""
@@ -194,33 +194,3 @@ class ConflictTests(PortalTestCase):
             services.cancel_reservation(reservation, actor=self.student)
             again = self.book_seat(student=self.other_student, start_hour=11)
         self.assertEqual(again.status, Status.CONFIRMED)
-
-    def test_a_room_and_a_seat_do_not_block_each_other(self):
-        with frozen_time(at(hour=9)):
-            self.book_seat(start_hour=11)
-            self.book_room(student=self.other_student, start_hour=11)
-
-
-class RoomBookingTests(PortalTestCase):
-    def test_group_size_must_fit_the_room(self):
-        with frozen_time(at(hour=9)):
-            for count, code in ((1, 'under_occupancy'), (5, 'over_capacity')):
-                with self.assertRaises(ApiError) as caught:
-                    self.book_room(participant_count=count)
-                self.assertEqual(caught.exception.detail.code, code)
-            self.assertEqual(self.book_room(participant_count=4).participant_count, 4)
-
-    def test_invited_classmates_are_recorded_and_notified(self):
-        with frozen_time(at(hour=9)):
-            reservation = self.book_room(participants=[self.other_student])
-        self.assertEqual(reservation.participants.count(), 1)
-        self.assertTrue(Notification.objects.filter(
-            user=self.other_student,
-            title='You were added to a study room reservation').exists())
-
-    def test_room_duration_limit_differs_from_seats(self):
-        with frozen_time(at(hour=9)):
-            with self.assertRaises(ApiError) as caught:
-                self.book_room(hours=3)  # rooms: 2 hours by default
-            self.assertEqual(caught.exception.detail.code, 'too_long')
-            self.book_seat(hours=3)      # seats: up to 4 hours

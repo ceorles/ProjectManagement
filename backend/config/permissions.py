@@ -56,12 +56,21 @@ class IsAdminOrReadOnly(BasePermission):
 class CanManageResourcesOrReadOnly(BasePermission):
     """
     Any signed-in user may read. Writing needs an admin, or a librarian the
-    admin has granted the "manage seats and rooms" permission.
+    admin has granted the "manage seats" permission.
     """
 
-    message = 'You are not permitted to manage seats and study rooms.'
+    message = 'You are not permitted to manage seats.'
 
     def has_permission(self, request, view):
         if not _authenticated(request):
             return False
         return request.method in SAFE_METHODS or request.user.can_manage_library_resources
+
+
+class CanManageResources(BasePermission):
+    """Reading and writing: an admin, or a librarian the admin has allowed."""
+
+    message = 'You are not permitted to manage seats.'
+
+    def has_permission(self, request, view):
+        return _authenticated(request) and request.user.can_manage_library_resources

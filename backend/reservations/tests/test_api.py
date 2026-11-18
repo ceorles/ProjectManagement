@@ -22,27 +22,6 @@ class ReservationApiTests(PortalTestCase):
         self.assertTrue(response.data['can_cancel'])
         self.assertFalse(response.data['can_check_in'])  # too early
 
-    def test_student_books_a_room_with_an_invited_classmate(self):
-        self.login_as(self.student)
-        with frozen_time(at(hour=9)):
-            response = self.client.post('/api/reservations/', {
-                'resource_type': 'room', 'room': self.room.pk, 'date': DAY,
-                'start_time': '13:00', 'end_time': '14:30', 'participant_count': 3,
-                'purpose': 'Capstone meeting', 'participant_student_ids': ['2024-0002'],
-            })
-            self.assertEqual(response.status_code, 201, response.data)
-            self.assertEqual(response.data['participant_count'], 3)
-            self.assertEqual(response.data['participants'][0]['full_name'], 'Olive Other')
-
-            # The invited classmate sees it, read-only.
-            self.login_as(self.other_student)
-            listing = self.client.get('/api/reservations/')
-            self.assertEqual(listing.data['count'], 1)
-            self.assertFalse(listing.data['results'][0]['is_owner'])
-            self.assertFalse(listing.data['results'][0]['can_cancel'])
-            cancel = self.client.post(f'/api/reservations/{response.data["id"]}/cancel/')
-            self.assertEqual(cancel.status_code, 403)
-
     def test_conflict_returns_409(self):
         with frozen_time(at(hour=9)):
             self.book_seat(student=self.other_student)
@@ -61,12 +40,6 @@ class ReservationApiTests(PortalTestCase):
             ragged = self.client.post(
                 '/api/reservations/', self.seat_payload(start_time='11:10'))
             self.assertEqual(self.error_code(ragged), 'invalid_time')
-            unknown_classmate = self.client.post('/api/reservations/', {
-                'resource_type': 'room', 'room': self.room.pk, 'date': DAY,
-                'start_time': '13:00', 'end_time': '14:00', 'participant_count': 2,
-                'participant_student_ids': ['0000-0000'],
-            })
-            self.assertEqual(unknown_classmate.status_code, 400)
 
     def test_student_field_is_ignored_for_students(self):
         """A student cannot book in another student's name by sending `student`."""
@@ -142,7 +115,7 @@ class ReservationApiTests(PortalTestCase):
     def test_list_filters(self):
         with frozen_time(at(hour=9)):
             seat_booking = self.book_seat()
-            self.book_room(student=self.other_student, start_hour=14)
+            self.book_seat(student=self.other_student, seat=self.computer, start_hour=14)
             services.cancel_reservation(seat_booking, actor=self.student)
             self.login_as(self.librarian)
 
@@ -152,7 +125,7 @@ class ReservationApiTests(PortalTestCase):
             self.assertEqual(count(scope='active'), 1)
             self.assertEqual(count(scope='history'), 1)
             self.assertEqual(count(status='cancelled'), 1)
-            self.assertEqual(count(resource_type='room'), 1)
+            self.assertEqual(count(resource_type='seat'), 2)
             self.assertEqual(count(search='olive'), 1)
             self.assertEqual(count(search='A01'), 1)
             self.assertEqual(count(date=DAY), 2)
@@ -227,16 +200,3 @@ class AvailabilityApiTests(PortalTestCase):
         response = self.client.get('/api/seats/availability/', {'date': DAY})
         self.assertEqual(response.status_code, 400)
 
-    def test_room_availability_and_schedule(self):
-        with frozen_time(at(hour=9)):
-            self.book_room(student=self.other_student, start_hour=13)
-            self.login_as(self.student)
-            response = self.client.get(
-                '/api/study-rooms/availability/', {'date': DAY, 'start': '13:00', 'end': '14:00'})
-            self.assertEqual(response.data['rooms'][0]['state'], 'reserved')
-            schedule = self.client.get(
-                f'/api/study-rooms/{self.room.pk}/schedule/', {'date': DAY})
-        self.assertEqual(schedule.data['opens_at'], '08:00')
-        self.assertEqual(
-            [(b['start_time'], b['end_time']) for b in schedule.data['blocks']],
-            [('13:00', '14:00')])

@@ -30,7 +30,7 @@ function statusMessage(reservation, timeZone, isStaff) {
         : 'This request was not approved by the librarian.'
     case 'confirmed':
       if (reservation.can_check_in) {
-        return `Check-in is open until ${formatClock(reservation.checkin_deadline, timeZone)}. After that the reservation is released.`
+        return `Check-in is open until ${formatClock(reservation.checkin_deadline, timeZone)}. After that the reservation is automatically cancelled.`
       }
       return `Check-in opens at ${formatClock(reservation.checkin_opens_at, timeZone)} and closes at ${formatClock(reservation.checkin_deadline, timeZone)}.`
     case 'checked_in':
@@ -42,7 +42,8 @@ function statusMessage(reservation, timeZone, isStaff) {
         ? `This reservation was cancelled. Reason: ${reservation.cancel_reason}`
         : 'This reservation was cancelled.'
     case 'no_show':
-      return 'Nobody checked in during the check-in period, so the reservation was released.'
+      return reservation.cancel_reason
+        || 'Nobody arrived for this reservation, so the library released it.'
     default:
       return ''
   }

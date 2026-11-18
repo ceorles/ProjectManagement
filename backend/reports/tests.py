@@ -29,7 +29,8 @@ class DashboardTests(PortalTestCase):
         self.assertEqual(data['stats']['upcoming'], 2)
         self.assertEqual(data['limits']['active_reservations'], 2)
         self.assertTrue(data['library']['open_now'])
-        self.assertEqual(data['occupancy']['seats']['total'], 10)
+        self.assertEqual(data['occupancy']['seats']['total'], 8)
+        self.assertEqual(data['occupancy']['computers']['total'], 2)
 
     def test_staff_dashboard_shows_live_occupancy(self):
         with frozen_time(at(hour=9)):
@@ -41,7 +42,7 @@ class DashboardTests(PortalTestCase):
             data = self.client.get('/api/reports/staff-dashboard/').data
         self.assertEqual(data['occupancy']['seats']['occupied'], 1)
         self.assertEqual(data['occupancy']['seats']['reserved'], 1)
-        self.assertEqual(data['occupancy']['seats']['available'], 8)
+        self.assertEqual(data['occupancy']['seats']['available'], 6)
         self.assertEqual(len(data['checked_in']), 1)
         self.assertEqual(len(data['awaiting_check_in']), 1)
         self.assertEqual(data['today']['total'], 2)

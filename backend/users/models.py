@@ -63,7 +63,7 @@ class User(AbstractUser):
     # Librarian permission granted by an Admin.
     can_manage_resources = models.BooleanField(
         default=False,
-        help_text='Allows a librarian to add, edit and disable seats and study rooms.',
+        help_text='Allows a librarian to add, edit and disable seats.',
     )
 
     USERNAME_FIELD = 'email'

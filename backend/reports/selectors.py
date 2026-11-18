@@ -14,7 +14,6 @@ from library.services import get_day_schedule, local_now, local_today
 from reservations.models import Reservation, ReservationSeat
 from reservations.windows import to_datetime
 from seats.models import Seat
-from study_rooms.models import StudyRoom
 from users.models import User
 
 Status = Reservation.Status
@@ -96,13 +95,13 @@ def period_report(days):
     for offset in range(days):
         day = first_day + timedelta(days=offset)
         daily[day] = {
-            'date': day.isoformat(), 'total': 0, 'seat': 0, 'room': 0,
+            'date': day.isoformat(), 'total': 0, 'seat': 0, 'computer': 0,
             Status.COMPLETED: 0, Status.CANCELLED: 0, Status.NO_SHOW: 0,
         }
     by_hour = Counter()
     by_weekday = Counter()
     seat_use = Counter()
-    room_use = Counter()
+    computer_use = Counter()
     zone_use = Counter()
     students = set()
     booked_minutes = 0
@@ -110,16 +109,17 @@ def period_report(days):
     # Requests that never became a visit do not count as usage.
     unused = (Status.CANCELLED, Status.REJECTED)
     rows = queryset.values_list(
-        'start_at', 'end_at', 'status', 'resource_type', 'room__name', 'room__is_archived',
-        'student_id',
+        'start_at', 'end_at', 'status', 'resource_type', 'seat__has_computer', 'student_id',
     )
-    for start_at, end_at, status, resource_type, room_name, room_retired, student in rows:
+    for start_at, end_at, status, resource_type, is_computer, student in rows:
         local_start = timezone.localtime(start_at)
         bucket = daily.get(local_start.date())
         if bucket is None:
             continue
         bucket['total'] += 1
-        bucket[resource_type] += 1
+        # Past room reservations count in the totals, but rooms are not charted.
+        if resource_type == Reservation.ResourceType.SEAT:
+            bucket['computer' if is_computer else 'seat'] += 1
         if status in bucket:
             bucket[status] += 1
         if status in unused:
@@ -128,8 +128,6 @@ def period_report(days):
         by_weekday[local_start.weekday()] += 1
         students.add(student)
         booked_minutes += int((end_at - start_at).total_seconds() // 60)
-        if resource_type == Reservation.ResourceType.ROOM and not room_retired:
-            room_use[room_name] += 1
 
     # Seat rankings count every seat of a request, and only seats and areas
     # that still exist in the library.
@@ -140,7 +138,10 @@ def period_report(days):
         .values_list('seat__number', 'seat__has_computer', 'seat__zone__name')
     )
     for number, is_computer, zone_name in seat_rows:
-        seat_use[f'Computer {number}' if is_computer else f'Seat {number}'] += 1
+        if is_computer:
+            computer_use[f'Computer {number}'] += 1
+        else:
+            seat_use[f'Seat {number}'] += 1
         zone_use[zone_name] += 1
 
     counts = status_counts(queryset)
@@ -151,7 +152,7 @@ def period_report(days):
             **counts,
             **rates(counts),
             'seat': sum(day['seat'] for day in daily.values()),
-            'room': sum(day['room'] for day in daily.values()),
+            'computer': sum(day['computer'] for day in daily.values()),
             'unique_students': len(students),
             'hours_booked': round(booked_minutes / 60, 1),
             'hours_used': hours_used(queryset),
@@ -166,7 +167,7 @@ def period_report(days):
             for index, label in enumerate(WEEKDAYS)
         ],
         'top_seats': [{'label': k, 'count': v} for k, v in seat_use.most_common(8)],
-        'top_rooms': [{'label': k, 'count': v} for k, v in room_use.most_common(8)],
+        'top_computers': [{'label': k, 'count': v} for k, v in computer_use.most_common(8)],
         'by_zone': [{'label': k, 'count': v} for k, v in zone_use.most_common()],
     }
 
@@ -178,8 +179,8 @@ def system_totals():
         'librarians': User.objects.filter(role=User.Role.LIBRARIAN, is_active=True).count(),
         'admins': User.objects.filter(role=User.Role.ADMIN, is_active=True).count(),
         'inactive_accounts': User.objects.filter(is_active=False).count(),
-        'seats': Seat.objects.count(),
-        'rooms': StudyRoom.objects.count(),
+        'seats': Seat.objects.filter(has_computer=False).count(),
+        'computers': Seat.objects.filter(has_computer=True).count(),
         'active_reservations': Reservation.objects.filter(status__in=ACTIVE).count(),
         'pending_requests': Reservation.objects.filter(status=Status.PENDING).count(),
         'reservations_today': Reservation.objects.filter(

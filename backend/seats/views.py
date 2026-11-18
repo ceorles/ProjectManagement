@@ -1,19 +1,20 @@
-from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from activity.services import log_activity
-from config.permissions import CanManageResourcesOrReadOnly
-from library.models import ResourceStatus
+from config.exceptions import ApiError
+from config.permissions import CanManageResources, CanManageResourcesOrReadOnly
 from reservations import availability
-from reservations.services import cancel_for_resource
 from reservations.windows import parse_day, parse_window
 
+from . import services
 from .models import Seat, Zone
-from .serializers import ResourceStatusSerializer, SeatSerializer, ZoneSerializer
+from .serializers import (
+    ResourceStatusSerializer, SeatSerializer, TableStatusSerializer, ZoneSerializer,
+)
 
 
 class ZoneViewSet(viewsets.ModelViewSet):
@@ -50,7 +51,9 @@ class SeatViewSet(viewsets.ModelViewSet):
     permission_classes = [CanManageResourcesOrReadOnly]
 
     def get_queryset(self):
-        queryset = Seat.objects.select_related('zone__floor')
+        # All the chairs of one table together, table after table.
+        queryset = Seat.objects.select_related('zone__floor').order_by(
+            'zone', F('table_number').asc(nulls_last=True), 'number')
         params = self.request.query_params
         if params.get('zone'):
             queryset = queryset.filter(zone_id=params['zone'])
@@ -84,32 +87,44 @@ class SeatViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='set-status')
     def set_status(self, request, pk=None):
-        """Take a seat out of service or put it back, cancelling affected bookings."""
+        """Take one seat out of service or put it back. Its table is not touched."""
         seat = self.get_object()
         serializer = ResourceStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        new_status = serializer.validated_data['status']
+        data = serializer.validated_data
+        seat, cancelled = services.set_seat_status(
+            seat, status=data['status'], note=data['note'],
+            confirmed=data['confirm_cancellations'], actor=request.user, request=request,
+        )
+        payload = self.get_serializer(seat).data
+        payload['cancelled_reservations'] = cancelled
+        return Response(payload)
 
-        cancelled = 0
-        with transaction.atomic():
-            seat.status = new_status
-            seat.status_note = (
-                '' if new_status == ResourceStatus.ACTIVE else serializer.validated_data['note']
-            )
-            seat.save(update_fields=['status', 'status_note', 'updated_at'])
-            if new_status != ResourceStatus.ACTIVE:
-                cancelled = cancel_for_resource(
-                    seat, actor=request.user,
-                    reason=f'Seat {seat.number} is {seat.get_status_display().lower()}.',
-                )
-            log_activity(
-                'resource.seat_status',
-                f'Set seat {seat.number} to "{seat.get_status_display()}".',
-                actor=request.user, target=seat, request=request,
-            )
-        data = self.get_serializer(seat).data
-        data['cancelled_reservations'] = cancelled
-        return Response(data)
+    @action(detail=True, methods=['get'], url_path='affected-reservations',
+            permission_classes=[CanManageResources])
+    def affected_reservations(self, request, pk=None):
+        """Reservations that taking this seat out of service would affect."""
+        return Response(services.affected_reservations([self.get_object()]))
+
+    @action(detail=False, methods=['get'], permission_classes=[CanManageResources])
+    def tables(self, request):
+        """Every table of a zone (?zone=id) with its seats, state and reservations."""
+        zone = request.query_params.get('zone')
+        if not zone or not zone.isdigit():
+            raise ApiError('Choose a zone.', code='missing_zone')
+        return Response(services.tables_overview(int(zone)))
+
+    @action(detail=False, methods=['post'], url_path='tables/set-status',
+            permission_classes=[CanManageResources])
+    def set_table_status(self, request):
+        """Take a whole table out of service or restore it, as one operation."""
+        serializer = TableStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        return Response(services.set_table_status(
+            data['zone'], data['table_number'], status=data['status'], note=data['note'],
+            confirmed=data['confirm_cancellations'], actor=request.user, request=request,
+        ))
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def availability(self, request):

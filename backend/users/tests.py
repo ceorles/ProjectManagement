@@ -190,12 +190,6 @@ class AccountManagementTests(PortalTestCase):
         self.student.refresh_from_db()
         self.assertTrue(self.student.check_password('Fresh!Passw0rd9'))
 
-    def test_student_lookup_is_exact_match_only(self):
+    def test_only_staff_can_browse_students(self):
         self.login_as(self.student)
-        found = self.client.get('/api/users/lookup/', {'student_id': '2024-0002'})
-        self.assertEqual(found.status_code, 200)
-        self.assertEqual(set(found.data), {'id', 'full_name', 'student_id'})
-        partial = self.client.get('/api/users/lookup/', {'student_id': '2024'})
-        self.assertEqual(partial.status_code, 404)
-        # Browsing the student list is for staff only.
         self.assertEqual(self.client.get('/api/users/students/').status_code, 403)

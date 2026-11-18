@@ -85,12 +85,11 @@ def format_duration(minutes):
     return f'{rest} minutes'
 
 
-def check_bookable(window, resource_type, policy, now=None):
+def check_bookable(window, policy, now=None):
     """
     Raise ApiError unless a new reservation may be placed in this window.
 
-    Covers the rules that do not depend on a particular seat, room or
-    student: the past, the advance-booking limit, duration limits, and the
+    Covers the rules that do not depend on a particular seat or student: the past, the advance-booking limit, duration limits, and the
     library's opening hours and closures.
     """
     now = now or timezone.now()
@@ -98,10 +97,11 @@ def check_bookable(window, resource_type, policy, now=None):
 
     if window.day < today or window.end_at <= now:
         raise ApiError('That time has already passed.', code='in_the_past')
-    # The slot currently in progress may still be booked (walk-ins), but
-    # nothing earlier than that.
-    if window.start_at + SLOT <= now:
-        raise ApiError('That start time has already passed.', code='in_the_past')
+    # The slot in progress may still be booked (walk-ins), but only while its
+    # check-in period is open: afterwards it would be a no-show straight away.
+    if now >= window.start_at + timedelta(minutes=policy.checkin_grace_minutes):
+        raise ApiError('That start time has already passed. Please choose a later time.',
+                       code='in_the_past')
 
     latest = today + timedelta(days=policy.max_advance_days)
     if window.day > latest:
@@ -116,12 +116,10 @@ def check_bookable(window, resource_type, policy, now=None):
             f'The minimum reservation is {format_duration(policy.min_duration_minutes)}.',
             code='too_short',
         )
-    maximum = (policy.max_seat_duration_minutes if resource_type == 'seat'
-               else policy.max_room_duration_minutes)
+    maximum = policy.max_seat_duration_minutes
     if window.minutes > maximum:
-        kind = 'seat' if resource_type == 'seat' else 'study room'
         raise ApiError(
-            f'A {kind} can be reserved for at most {format_duration(maximum)}.',
+            f'A seat can be reserved for at most {format_duration(maximum)}.',
             code='too_long',
         )
 

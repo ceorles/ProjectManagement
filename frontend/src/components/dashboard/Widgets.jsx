@@ -29,7 +29,7 @@ const SEGMENTS = [
 ]
 
 /**
- * Live occupancy of seats or rooms as one segmented bar. Every segment is
+ * Live occupancy of seats or computers as one segmented bar. Every segment is
  * also written out with its count, so the colours only repeat the text.
  */
 export function OccupancyMeter({ title, data, to }) {

@@ -55,7 +55,7 @@ export default function RegisterPage() {
     <AuthLayout
       wide
       title="Create your student account"
-      subtitle="Register once, then reserve seats and study rooms any time."
+      subtitle="Register once, then reserve seats and computers any time."
       footer={<>Already registered? <Link to="/login" state={location.state}>Sign in</Link></>}
     >
       <form className="auth__form" onSubmit={submit}>

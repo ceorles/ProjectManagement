@@ -3,7 +3,6 @@ from django.core.management.base import BaseCommand
 from library.layout import apply_library_layout
 from library.models import Floor
 from seats.models import Seat, Zone
-from study_rooms.models import StudyRoom
 
 
 class Command(BaseCommand):
@@ -23,6 +22,5 @@ class Command(BaseCommand):
             detail = f'{tables} tables, ' if tables else ''
             self.stdout.write(f'  {zone.name} ({zone.floor.name}): {detail}{seats.count()} seats')
         self.stdout.write(
-            f'  Floors: {", ".join(Floor.objects.values_list("name", flat=True))} | '
-            f'Study rooms: {StudyRoom.objects.count()}')
+            f'  Floors: {", ".join(Floor.objects.values_list("name", flat=True))}')
         self.stdout.write(self.style.SUCCESS('Library layout is in place.'))

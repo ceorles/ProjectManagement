@@ -1,5 +1,5 @@
 import {
-  Armchair, CalendarCheck, CircleAlert, Clock, DoorOpen, GraduationCap, UserX,
+  Armchair, CalendarCheck, CircleAlert, Clock, GraduationCap, UserX,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Button from '../../components/common/Button'
@@ -73,7 +73,7 @@ export default function StudentDashboard() {
         </div>
         <div className="welcome__actions">
           <Button to="/seats" variant="accent" icon={Armchair}>Reserve a seat</Button>
-          <Button to="/rooms" variant="secondary" icon={DoorOpen}>Reserve a room</Button>
+          <Button to="/reservations" variant="secondary" icon={CalendarCheck}>My reservations</Button>
         </div>
       </section>
 
@@ -119,7 +119,7 @@ export default function StudentDashboard() {
                     <EmptyState
                       compact icon={CalendarCheck}
                       title={data.current ? 'Nothing else booked' : 'No upcoming reservations'}
-                      description="Reserve a seat or a study room for your next study session."
+                      description="Reserve a seat or a computer for your next study session."
                       action={<Button to="/seats" size="sm" icon={Armchair}>Reserve a seat</Button>}
                     />
                   ) : (
@@ -150,7 +150,7 @@ export default function StudentDashboard() {
                   <div className="stack-lg">
                     <OccupancyMeter title="Seats" data={data.occupancy.seats} to="/seats" />
                     <hr className="divider" />
-                    <OccupancyMeter title="Study room" data={data.occupancy.rooms} to="/rooms" />
+                    <OccupancyMeter title="Computers" data={data.occupancy.computers} to="/seats" />
                   </div>
                 </Card>
                 <Card title="Your booking standing">

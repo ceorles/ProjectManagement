@@ -8,11 +8,9 @@ import ReservationPass from './ReservationPass'
 
 /** The "please check before you confirm" summary shown in booking dialogs. */
 export function BookingSummary({ items, window, end }) {
-  const { policy, now } = useLibrary()
+  const { policy } = useLibrary()
   const start = timeToMinutes(window.start)
-  // For a slot that is already running, the grace period counts from now.
-  const base = window.date === now.date ? Math.max(start, now.minutes) : start
-  const deadline = minutesToTime(Math.min(base + policy.checkin_grace_minutes, timeToMinutes(end)))
+  const deadline = minutesToTime(start + policy.checkin_grace_minutes)
   const opens = minutesToTime(start - policy.checkin_early_minutes)
   return (
     <div className="stack">
@@ -36,8 +34,9 @@ export function BookingSummary({ items, window, end }) {
         <Info size={16} aria-hidden="true" />
         <span>
           Check in from <strong>{formatTime(opens)}</strong> and no later than{' '}
-          <strong>{formatTime(deadline)}</strong>. After that the reservation is released and
-          counted as a missed reservation.
+          <strong>{formatTime(deadline)}</strong>. If you do not check in within{' '}
+          {policy.checkin_grace_minutes} minutes of the start time, the reservation is
+          automatically cancelled and counted as a missed reservation.
         </span>
       </p>
     </div>

@@ -18,6 +18,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -53,6 +54,11 @@ if not SECRET_KEY:
 DEBUG = env_bool('DJANGO_DEBUG', False)
 
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+
+# Render sets this to the service's own address (name.onrender.com).
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
@@ -116,13 +122,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 #
-# SQLite is the default. Set DB_ENGINE to another Django backend (for example
-# django.db.backends.postgresql) together with DB_NAME/DB_USER/DB_PASSWORD/
-# DB_HOST/DB_PORT to switch databases without touching this file.
+# In production set DATABASE_URL to the connection string of the PostgreSQL
+# database (Render PostgreSQL or Supabase).
+#
+# Without it SQLite is the default. DB_ENGINE can also name another Django
+# backend, together with DB_NAME/DB_USER/DB_PASSWORD/DB_HOST/DB_PORT.
 
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 DB_ENGINE = os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3')
 
-if DB_ENGINE == 'django.db.backends.sqlite3':
+if DATABASE_URL:
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL)}
+elif DB_ENGINE == 'django.db.backends.sqlite3':
     DATABASES = {
         'default': {
             'ENGINE': DB_ENGINE,
@@ -197,8 +208,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Uploaded files (library personnel photos, landing page photos).
+# Uploaded files (library personnel photos, landing page photos). In production
+# MEDIA_DIR must point to a persistent disk, for example /var/data/media.
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / os.environ.get('MEDIA_DIR', 'media')
 
@@ -288,6 +301,13 @@ RESERVATION_SLOT_MINUTES = 30
 # Minimum number of seconds between automatic no-show / completion sweeps.
 RESERVATION_SWEEP_INTERVAL_SECONDS = int(os.environ.get('RESERVATION_SWEEP_INTERVAL_SECONDS', '10'))
 
+# The background scheduler that cancels no-shows without anyone using the app
+# (see reservations/scheduler.py). It starts together with the web server. Turn
+# it off only when `python manage.py run_reservation_scheduler` runs separately.
+RESERVATION_SCHEDULER_ENABLED = env_bool('RESERVATION_SCHEDULER_ENABLED', True)
+RESERVATION_SCHEDULER_INTERVAL_SECONDS = int(
+    os.environ.get('RESERVATION_SCHEDULER_INTERVAL_SECONDS', '30'))
+
 
 # Production hardening (applies when DEBUG is off)
 
@@ -295,3 +315,21 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+
+    # Render ends HTTPS at its proxy and says so in this header.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # Serves the Django admin site's CSS and JavaScript.
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    STORAGES = {
+        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
+    }
+
+    # Send errors and scheduler messages to the host's log viewer.
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {'console': {'class': 'logging.StreamHandler'}},
+        'root': {'handlers': ['console'], 'level': 'INFO'},
+    }

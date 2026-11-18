@@ -182,36 +182,25 @@ class ReservationSerializer(serializers.ModelSerializer):
 class ReservationCreateSerializer(serializers.Serializer):
     """Shape and existence checks only; the booking rules live in services."""
 
-    resource_type = serializers.ChoiceField(choices=Reservation.ResourceType.choices)
+    # Only seats and computers can be reserved.
+    resource_type = serializers.ChoiceField(
+        choices=[Reservation.ResourceType.SEAT], default=Reservation.ResourceType.SEAT)
     seat = serializers.IntegerField(required=False, allow_null=True)
     # One to six seats (a whole table). `seat` is accepted for a single seat.
     seats = serializers.ListField(
         child=serializers.IntegerField(), required=False, default=list, max_length=20)
-    room = serializers.IntegerField(required=False, allow_null=True)
     date = serializers.DateField()
     start_time = serializers.TimeField(input_formats=['%H:%M', '%H:%M:%S'])
     end_time = serializers.TimeField(input_formats=['%H:%M', '%H:%M:%S'])
-    participant_count = serializers.IntegerField(min_value=1, max_value=100, default=1)
     purpose = serializers.CharField(max_length=200, allow_blank=True, default='')
-    participant_student_ids = serializers.ListField(
-        child=serializers.CharField(max_length=20), required=False, default=list,
-        max_length=50,
-    )
     # Staff only: the student the reservation is for.
     student = serializers.IntegerField(required=False, allow_null=True)
 
     def validate(self, attrs):
-        if attrs['resource_type'] == Reservation.ResourceType.SEAT:
-            seat_ids = list(attrs['seats']) or ([attrs['seat']] if attrs.get('seat') else [])
-            if not seat_ids:
-                raise serializers.ValidationError({'seats': 'Choose at least one seat.'})
-            attrs['seat_ids'] = seat_ids
-            attrs['resource_id'] = None
-        else:
-            if not attrs.get('room'):
-                raise serializers.ValidationError({'room': 'Choose a room to reserve.'})
-            attrs['seat_ids'] = None
-            attrs['resource_id'] = attrs['room']
+        seat_ids = list(attrs['seats']) or ([attrs['seat']] if attrs.get('seat') else [])
+        if not seat_ids:
+            raise serializers.ValidationError({'seats': 'Choose at least one seat.'})
+        attrs['seat_ids'] = seat_ids
 
         viewer = self.context['request'].user
         if viewer.can_manage_reservations:
@@ -223,18 +212,6 @@ class ReservationCreateSerializer(serializers.Serializer):
             attrs['student_user'] = student
         else:
             attrs['student_user'] = viewer  # a student always books for themself
-
-        participants = []
-        for raw in dict.fromkeys(s.strip() for s in attrs['participant_student_ids']):
-            if not raw:
-                continue
-            person = User.objects.filter(
-                role=User.Role.STUDENT, is_active=True, student_id__iexact=raw).first()
-            if person is None:
-                raise serializers.ValidationError(
-                    {'participant_student_ids': f'No active student has the ID "{raw}".'})
-            participants.append(person)
-        attrs['participants'] = participants
         return attrs
 
 

@@ -125,17 +125,6 @@ class ApprovalWorkflowTests(PortalTestCase):
         self.assertEqual(
             Reservation.objects.filter(student=self.student, status=Status.NO_SHOW).count(), 0)
 
-    def test_grace_period_counts_from_a_late_approval(self):
-        with frozen_time(at(hour=9)):
-            reservation = self.request_seats([self.seat], hours=2)
-        with frozen_time(at(hour=11, minute=10)):
-            services.approve_reservation(reservation, actor=self.librarian)
-        with frozen_time(at(hour=11, minute=20)):
-            services.process_due_reservations()
-            reservation.refresh_from_db()
-            self.assertEqual(reservation.status, Status.CONFIRMED)  # still inside the grace period
-            services.check_in(reservation, actor=self.student)
-
     def test_booking_entered_by_a_librarian_is_confirmed_at_once(self):
         with frozen_time(at(hour=9)):
             reservation = services.create_reservation(

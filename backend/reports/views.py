@@ -117,7 +117,7 @@ class AdminDashboardView(APIView):
             'trend': report['daily'],
             'last_30_days': month['totals'],
             'top_seats': month['top_seats'][:5],
-            'top_rooms': month['top_rooms'][:5],
+            'top_computers': month['top_computers'][:5],
             'recent_activity': ActivityLogSerializer(recent, many=True).data,
         })
 

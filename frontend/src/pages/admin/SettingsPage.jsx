@@ -177,7 +177,6 @@ const RULES = [
     fields: [
       { name: 'min_duration_minutes', label: 'Shortest reservation', kind: 'duration', max: 120 },
       { name: 'max_seat_duration_minutes', label: 'Longest seat reservation', kind: 'duration', max: 720 },
-      { name: 'max_room_duration_minutes', label: 'Longest room reservation', kind: 'duration', max: 720 },
       { name: 'max_advance_days', label: 'Book ahead (days)', kind: 'number', min: 0, max: 60, hint: '0 = same day only.' },
     ],
   },
@@ -191,8 +190,7 @@ const RULES = [
   {
     title: 'Check-in and cancellation',
     fields: [
-      { name: 'checkin_early_minutes', label: 'Check-in opens (minutes before start)', kind: 'number', min: 0, max: 60 },
-      { name: 'checkin_grace_minutes', label: 'Grace period (minutes after start)', kind: 'number', min: 5, max: 120, hint: 'After this, an unattended reservation becomes a no-show.' },
+      { name: 'checkin_early_minutes', label: 'Check-in opens (minutes before start)', kind: 'number', min: 0, max: 60, hint: 'Confirmed reservations are cancelled automatically 15 minutes after the start time if nobody has checked in.' },
       { name: 'cancellation_cutoff_minutes', label: 'Cancel at least (minutes before start)', kind: 'number', min: 0, max: 1440, hint: '0 = students may cancel until the start time.' },
       { name: 'reminder_minutes', label: 'Reminder (minutes before start)', kind: 'number', min: 0, max: 240, hint: '0 = no reminders.' },
     ],

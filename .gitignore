@@ -11,6 +11,10 @@ backend/.env
 backend/staticfiles/
 backend/media/
 
+# Database and media backups contain personal data: never commit them
+backend/backup*.json
+backend/media-backup*.zip
+
 # Frontend (see also frontend/.gitignore)
 frontend/node_modules/
 frontend/dist/

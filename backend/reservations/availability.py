@@ -2,13 +2,13 @@
 from collections import defaultdict
 from datetime import time, timedelta
 
+from django.db.models import F
 from django.utils import timezone
 
 from config.exceptions import ApiError
 from library.models import ResourceStatus
 from library.services import get_day_schedule, get_policy
 from seats.models import Seat, Zone
-from study_rooms.models import StudyRoom
 
 from .models import Reservation, ReservationSeat
 from .windows import check_bookable, to_datetime
@@ -66,17 +66,17 @@ def _overlapping(window_start, window_end, **filters):
     )
 
 
-def _bookable(window, resource_type):
+def _bookable(window):
     """Whether the window itself can be booked, and if not, why."""
     try:
-        check_bookable(window, resource_type, get_policy())
+        check_bookable(window, get_policy())
     except ApiError as exc:
         return False, str(exc.detail)
     return True, ''
 
 
-def _window_header(window, resource_type):
-    bookable, reason = _bookable(window, resource_type)
+def _window_header(window):
+    bookable, reason = _bookable(window)
     return {
         'date': window.day.isoformat(),
         'start_time': window.start_time.strftime('%H:%M'),
@@ -103,7 +103,9 @@ def seat_availability(window, *, viewer, floor_id=None, zone_id=None):
         zones = zones.filter(pk=zone_id)
     zones = list(zones)
 
-    seats = Seat.objects.filter(zone__in=zones).order_by('row', 'col')
+    # All the chairs of one table together, table after table.
+    seats = Seat.objects.filter(zone__in=zones).order_by(
+        F('table_number').asc(nulls_last=True), 'number')
     # A request can cover several seats, so availability is looked up per seat.
     by_seat = defaultdict(list)
     links = (
@@ -138,7 +140,7 @@ def seat_availability(window, *, viewer, floor_id=None, zone_id=None):
             'blocks': [_block(r, viewer) for r in reservations],
         })
 
-    payload = _window_header(window, Reservation.ResourceType.SEAT)
+    payload = _window_header(window)
     payload['summary'] = _tally(all_states)
     payload['zones'] = [
         {
@@ -158,49 +160,12 @@ def seat_availability(window, *, viewer, floor_id=None, zone_id=None):
     return payload
 
 
-def room_availability(window, *, viewer, floor_id=None):
-    rooms = StudyRoom.objects.select_related('floor').prefetch_related('facilities')
-    if floor_id:
-        rooms = rooms.filter(floor_id=floor_id)
-    rooms = list(rooms)
-
-    by_room = defaultdict(list)
-    for reservation in _overlapping(
-        window.start_at, window.end_at,
-        resource_type=Reservation.ResourceType.ROOM, room__in=rooms,
-    ):
-        by_room[reservation.room_id].append(reservation)
-
-    items = []
-    for room in rooms:
-        reservations = by_room.get(room.pk, [])
-        items.append({
-            'id': room.pk,
-            'name': room.name,
-            'code': room.code,
-            'floor': {'id': room.floor_id, 'name': room.floor.name, 'level': room.floor.level},
-            'capacity': room.capacity,
-            'min_occupancy': room.min_occupancy,
-            'description': room.description,
-            'facilities': [facility.name for facility in room.facilities.all()],
-            'status': room.status,
-            'status_note': room.status_note,
-            'state': _state(room, reservations, viewer),
-            'blocks': [_block(r, viewer) for r in reservations],
-        })
-
-    payload = _window_header(window, Reservation.ResourceType.ROOM)
-    payload['summary'] = _tally([item['state'] for item in items])
-    payload['rooms'] = items
-    return payload
-
-
 def day_schedule(resource, day, *, viewer):
-    """Opening hours and every booked interval of one seat/room on one day."""
+    """Opening hours and every booked interval of one seat on one day."""
     schedule = get_day_schedule(day)
     day_start = to_datetime(day, time.min)
-    field = 'reservation_seats__seat' if isinstance(resource, Seat) else 'room'
-    reservations = _overlapping(day_start, day_start + timedelta(days=1), **{field: resource})
+    reservations = _overlapping(
+        day_start, day_start + timedelta(days=1), reservation_seats__seat=resource)
     return {
         'date': day.isoformat(),
         'is_open': schedule.is_open,
@@ -213,20 +178,17 @@ def day_schedule(resource, day, *, viewer):
 
 
 def occupancy_now(now=None):
-    """Live counts of seats and rooms for the dashboards."""
+    """Live counts of Reading Hall seats and computers for the dashboards."""
     now = now or timezone.now()
     current = Reservation.objects.filter(status__in=ACTIVE, start_at__lte=now, end_at__gt=now)
 
-    def tally(resource_type, total, unavailable):
-        if resource_type == Reservation.ResourceType.SEAT:
-            # Count seats, not reservations: one request may hold a whole table.
-            rows = ReservationSeat.objects.filter(reservation__in=current)
-            occupied = rows.filter(reservation__status=Reservation.Status.CHECKED_IN).count()
-            reserved = rows.exclude(reservation__status=Reservation.Status.CHECKED_IN).count()
-        else:
-            rows = current.filter(resource_type=resource_type)
-            occupied = rows.filter(status=Reservation.Status.CHECKED_IN).count()
-            reserved = rows.exclude(status=Reservation.Status.CHECKED_IN).count()
+    def tally(places):
+        # Count seats, not reservations: one request may hold a whole table.
+        rows = ReservationSeat.objects.filter(reservation__in=current, seat__in=places)
+        occupied = rows.filter(reservation__status=Reservation.Status.CHECKED_IN).count()
+        reserved = rows.exclude(reservation__status=Reservation.Status.CHECKED_IN).count()
+        total = places.count()
+        unavailable = places.exclude(status=ResourceStatus.ACTIVE).count()
         bookable = total - unavailable
         return {
             'total': total,
@@ -238,14 +200,6 @@ def occupancy_now(now=None):
         }
 
     return {
-        'seats': tally(
-            Reservation.ResourceType.SEAT,
-            Seat.objects.count(),
-            Seat.objects.exclude(status=ResourceStatus.ACTIVE).count(),
-        ),
-        'rooms': tally(
-            Reservation.ResourceType.ROOM,
-            StudyRoom.objects.count(),
-            StudyRoom.objects.exclude(status=ResourceStatus.ACTIVE).count(),
-        ),
+        'seats': tally(Seat.objects.filter(has_computer=False)),
+        'computers': tally(Seat.objects.filter(has_computer=True)),
     }

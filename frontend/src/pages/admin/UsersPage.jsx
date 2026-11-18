@@ -114,8 +114,8 @@ function UserFormModal({ account, defaultRole, onClose, onSaved }) {
         )}
         {values.role === 'librarian' && (
           <Checkbox
-            className="span-2" label="May manage seats and study rooms"
-            description="Lets this librarian add, edit and take seats and rooms out of service."
+            className="span-2" label="May manage seats"
+            description="Lets this librarian add, edit and take seats and tables out of service."
             checked={values.can_manage_resources}
             onChange={(event) => setField('can_manage_resources', event.target.checked)}
           />

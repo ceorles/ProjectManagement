@@ -14,3 +14,8 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 application = get_asgi_application()
+
+# Cancels no-shows on schedule for as long as the server runs.
+from reservations.scheduler import start_background_scheduler  # noqa: E402
+
+start_background_scheduler()

@@ -3,8 +3,6 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -18,7 +16,6 @@ from .models import User
 from .serializers import (
     ManagedUserSerializer,
     SetPasswordSerializer,
-    StudentLookupSerializer,
     StudentSummarySerializer,
 )
 
@@ -149,24 +146,3 @@ class StudentSearchView(APIView):
                 | Q(student_id__icontains=search)
             )
         return Response(StudentSummarySerializer(queryset[:20], many=True).data)
-
-
-class StudentLookupView(APIView):
-    """
-    Any signed-in user: resolve an exact student ID to a name, used when
-    inviting classmates to a study room. Exact match only, so the endpoint
-    cannot be used to browse the student list.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        student_id = request.query_params.get('student_id', '').strip()
-        if not student_id:
-            raise ApiError('Enter a student ID.', code='missing_student_id')
-        student = User.objects.filter(
-            role=User.Role.STUDENT, is_active=True, student_id__iexact=student_id
-        ).first()
-        if student is None:
-            raise NotFound('No active student has that ID.')
-        return Response(StudentLookupSerializer(student).data)

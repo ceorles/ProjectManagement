@@ -20,7 +20,7 @@ import { reservationService } from '../../services'
 import { RESERVATION_STATUS } from '../../utils/constants'
 import { formatFriendlyDate, formatTimeRange } from '../../utils/datetime'
 
-const NO_FILTERS = { search: '', date: '', status: '', type: '' }
+const NO_FILTERS = { search: '', date: '', status: '' }
 
 /** Every reservation in the system, searchable and filterable. Staff only. */
 export default function ManageReservationsPage() {
@@ -33,10 +33,10 @@ export default function ManageReservationsPage() {
 
   const query = useApiQuery(
     () => reservationService.list({
-      search, date: filters.date, status: filters.status, resource_type: filters.type,
+      search, date: filters.date, status: filters.status,
       page, ordering: '-start_at',
     }),
-    [search, filters.date, filters.status, filters.type, page],
+    [search, filters.date, filters.status, page],
     { interval: POLL.reservations, keepPrevious: true },
   )
 
@@ -95,7 +95,7 @@ export default function ManageReservationsPage() {
       <section className="card">
         <div className="toolbar">
           <SearchInput value={filters.search} onChange={change('search')}
-            placeholder="Search student, ID, code, seat or room" />
+            placeholder="Search student, ID, code or seat" />
           <input type="date" className="input" aria-label="Date" value={filters.date}
             onChange={change('date')} />
           <select className="input select" aria-label="Status" value={filters.status}
@@ -104,11 +104,6 @@ export default function ManageReservationsPage() {
             {Object.entries(RESERVATION_STATUS).map(([value, meta]) => (
               <option key={value} value={value}>{meta.label}</option>
             ))}
-          </select>
-          <select className="input select" aria-label="Type" value={filters.type} onChange={change('type')}>
-            <option value="">Seats and rooms</option>
-            <option value="seat">Seats</option>
-            <option value="room">Study rooms</option>
           </select>
           {filtered && (
             <Button variant="ghost" size="sm" onClick={() => { setValues(NO_FILTERS); setPage(1) }}>

@@ -107,13 +107,9 @@ class ReservationViewSet(
         reservation = services.create_reservation(
             actor=request.user,
             student=data['student_user'],
-            resource_type=data['resource_type'],
-            resource_id=data['resource_id'],
             seat_ids=data['seat_ids'],
             window=build_window(data['date'], data['start_time'], data['end_time']),
-            participant_count=data['participant_count'],
             purpose=data['purpose'],
-            participants=data['participants'],
             request=request,
         )
         return self._respond(reservation, status.HTTP_201_CREATED)

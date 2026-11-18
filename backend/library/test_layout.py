@@ -23,7 +23,8 @@ class LibraryLayoutTests(PortalTestCase):
             name='Study Room 9', code='SR-9', floor=self.second_floor, capacity=4)
         with frozen_time(at(hour=9)):
             self.history = self.book_seat()          # on seat A01, to be retired
-            self.upcoming = self.book_room(start_hour=14)   # on the room that stays
+            self.upcoming = self.book_seat(  # on a seat of a retired zone too
+                student=self.other_student, seat=self.seat2, start_hour=14)
         self.users_before = User.objects.count()
         with frozen_time(at(hour=9)):   # both bookings are still in the future
             apply_library_layout()
@@ -55,8 +56,7 @@ class LibraryLayoutTests(PortalTestCase):
         self.assertEqual(pcs.filter(has_computer=True).count(), 4)
         self.assertEqual(Seat.objects.count(), 94)   # 90 chairs + 4 computers, nothing else
 
-        self.assertEqual(StudyRoom.objects.count(), 1)
-        self.assertEqual(StudyRoom.objects.get().floor.name, 'First Floor')
+        self.assertEqual(StudyRoom.objects.count(), 0)   # no room is reservable
 
     def test_old_resources_are_archived_not_deleted_and_history_survives(self):
         self.assertTrue(Zone.all_objects.filter(name='Quiet Zone East (retired)').exists())
@@ -70,7 +70,7 @@ class LibraryLayoutTests(PortalTestCase):
         # It was an upcoming booking on a seat that no longer exists: cancelled, kept.
         self.assertEqual(self.history.status, Reservation.Status.CANCELLED)
         self.upcoming.refresh_from_db()
-        self.assertEqual(self.upcoming.status, Reservation.Status.CONFIRMED)
+        self.assertEqual(self.upcoming.status, Reservation.Status.CANCELLED)
 
     def test_retired_places_disappear_from_the_api(self):
         self.login_as(self.student)
@@ -82,7 +82,7 @@ class LibraryLayoutTests(PortalTestCase):
             self.assertEqual({zone['name']: zone['seat_count'] for zone in zones},
                              {'Reading Hall': 90, 'Computer Area': 4})
             self.assertEqual(self.client.get('/api/seats/', {'page_size': 200}).data['count'], 94)
-            self.assertEqual(self.client.get('/api/study-rooms/').data['count'], 1)
+            self.assertEqual(self.client.get('/api/study-rooms/').status_code, 404)
             availability = self.client.get(
                 '/api/seats/availability/', {'date': '2026-03-02', 'start': '13:00', 'end': '14:00'})
             self.assertEqual(availability.data['summary']['total'], 94)

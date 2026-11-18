@@ -217,14 +217,3 @@ class StudentSummarySerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'full_name', 'student_id', 'email', 'program', 'year_level']
         read_only_fields = fields
-
-
-class StudentLookupSerializer(serializers.ModelSerializer):
-    """What one student may learn about another when inviting them: a name."""
-
-    full_name = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = User
-        fields = ['id', 'full_name', 'student_id']
-        read_only_fields = fields

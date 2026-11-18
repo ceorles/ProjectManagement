@@ -48,7 +48,10 @@ export function startTimes(overview, date, now) {
   const minimum = overview.policy.min_duration_minutes
   let first = schedule.opens
   if (date === now.date) {
-    first = Math.max(first, Math.floor(now.minutes / slot) * slot)
+    // The slot in progress can be booked only while its check-in period is open.
+    const current = Math.floor(now.minutes / slot) * slot
+    const open = now.minutes < current + overview.policy.checkin_grace_minutes
+    first = Math.max(first, open ? current : current + slot)
   }
   const times = []
   for (let minutes = first; minutes + minimum <= schedule.closes; minutes += slot) {
@@ -57,18 +60,16 @@ export function startTimes(overview, date, now) {
   return times
 }
 
-export function maxDuration(overview, resourceType) {
-  return resourceType === 'room'
-    ? overview.policy.max_room_duration_minutes
-    : overview.policy.max_seat_duration_minutes
+export function maxDuration(overview) {
+  return overview.policy.max_seat_duration_minutes
 }
 
 /** Durations (in minutes) that fit between `start` and closing time. */
-export function durations(overview, date, start, resourceType) {
+export function durations(overview, date, start) {
   const schedule = scheduleFor(overview, date)
   if (!schedule.isOpen || !start) return []
   const slot = overview.slot_minutes
-  const limit = Math.min(maxDuration(overview, resourceType), schedule.closes - timeToMinutes(start))
+  const limit = Math.min(maxDuration(overview), schedule.closes - timeToMinutes(start))
   const options = []
   for (let minutes = overview.policy.min_duration_minutes; minutes <= limit; minutes += slot) {
     options.push(minutes)
@@ -93,8 +94,8 @@ export function normalizeWindow(overview, now, resourceType, window) {
   const date = open.some((item) => item.date === window.date) ? window.date : open[0].date
   const starts = startTimes(overview, date, now)
   const start = starts.includes(window.start) ? window.start : starts[0]
-  const options = durations(overview, date, start, resourceType)
-  const preferred = resourceType === 'room' ? 60 : 120
+  const options = durations(overview, date, start)
+  const preferred = 120
   let duration = window.duration
   if (!options.includes(duration)) {
     duration = options.includes(preferred) ? preferred : options[options.length - 1]

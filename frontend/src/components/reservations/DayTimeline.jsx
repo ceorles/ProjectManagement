@@ -12,7 +12,7 @@ function hourMarks(opens, closes) {
 }
 
 /**
- * One day of a seat or room as a bar from opening to closing time, with the
+ * One day of a seat as a bar from opening to closing time, with the
  * booked intervals and (optionally) the window being considered. The same
  * information is listed as text underneath.
  */

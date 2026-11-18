@@ -147,7 +147,7 @@ export default function ProfilePage() {
               <div className="row-wrap">
                 <Badge tone="blue">{ROLES[user.role]}</Badge>
                 {user.role === 'librarian' && user.can_manage_resources && (
-                  <Badge tone="yellow">Manages seats and rooms</Badge>
+                  <Badge tone="yellow">Manages seats</Badge>
                 )}
               </div>
               <p className="muted small">Member since {formatTimestamp(user.date_joined, timeZone, { hour: undefined, minute: undefined })}</p>

@@ -31,10 +31,10 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
         manifest: {
           id: '/',
-          name: `${appName} - Seat & Study Room Reservation`,
+          name: `${appName} - Seat Reservation`,
           short_name: appName,
           description:
-            'DLL Library of Dalubhasaan ng Lungsod ng Lucena: reserve seats, tables, computers and the study room.',
+            'DLL Library of Dalubhasaan ng Lungsod ng Lucena: reserve seats, tables and computers.',
           lang: 'en',
           // The installed app opens on the sign-in page (or the dashboard when
           // already signed in), never on the public landing page.
@@ -58,7 +58,6 @@ export default defineConfig(({ mode }) => {
           ],
           shortcuts: [
             { name: 'Reserve a seat', url: '/seats' },
-            { name: 'Study rooms', url: '/rooms' },
             { name: 'My reservations', url: '/reservations' },
           ],
         },

@@ -101,17 +101,6 @@ class PortalTestCase(APITestCase):
             reservation = services.approve_reservation(reservation, actor=self.librarian)
         return reservation
 
-    def book_room(self, student=None, participant_count=2, participants=(), approve=True,
-                  **window_kwargs):
-        student = student or self.student
-        reservation = services.create_reservation(
-            actor=student, student=student, resource_type='room', resource_id=self.room.pk,
-            window=self.window(**window_kwargs), participant_count=participant_count,
-            participants=participants)
-        if approve:
-            reservation = services.approve_reservation(reservation, actor=self.librarian)
-        return reservation
-
     def seat_payload(self, **overrides):
         payload = {
             'resource_type': 'seat', 'seat': self.seat.pk, 'date': MONDAY.isoformat(),

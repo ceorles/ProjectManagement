@@ -20,12 +20,9 @@ from library.services import get_day_schedule, get_policy
 from notifications.models import Notification
 from notifications.services import notify, notify_many
 from seats.models import Seat
-from study_rooms.models import StudyRoom
 from users.models import User
 
-from .models import (
-    Reservation, ReservationParticipant, ReservationSeat, ReservationSlot, describe_seats,
-)
+from .models import Reservation, ReservationSeat, ReservationSlot, describe_seats
 from .windows import check_bookable, slot_starts
 
 Status = Reservation.Status
@@ -65,17 +62,11 @@ def checkin_opens_at(reservation, policy):
 
 def checkin_deadline(reservation, policy):
     """
-    Moment a reservation that has not been checked in is released.
-
-    The grace period is counted from the start time, or from the moment of
-    booking (a walk-in made after the slot began) or of approval (a request
-    approved after the slot began), whichever is latest. It never runs past
-    the end of the reservation. A request still pending at this moment expires.
+    Moment a reservation that has not been checked in is released: exactly
+    15 minutes after its start time, whenever it was booked or approved. A
+    request still pending at this moment expires.
     """
-    base = max(reservation.start_at, reservation.created_at)
-    if reservation.decided_at:
-        base = max(base, reservation.decided_at)
-    return min(base + timedelta(minutes=policy.checkin_grace_minutes), reservation.end_at)
+    return reservation.start_at + timedelta(minutes=policy.checkin_grace_minutes)
 
 
 def no_show_count(student, policy, now=None):
@@ -100,10 +91,6 @@ def _release_slots(reservation):
     reservation.slots.all().delete()
 
 
-def _participant_users(reservation):
-    return [p.student for p in reservation.participants.select_related('student')]
-
-
 # ── Creating a reservation ─────────────────────────────────────────────────
 
 def _lock_seats(seat_ids):
@@ -118,18 +105,8 @@ def _lock_seats(seat_ids):
     return sorted(seats, key=lambda seat: seat.number)
 
 
-def _lock_room(room_id):
-    try:
-        return StudyRoom.objects.select_for_update().get(pk=room_id)
-    except StudyRoom.DoesNotExist as exc:
-        raise ApiError('That study room does not exist.', code='resource_not_found') from exc
-
-
-def _check_seat_request(seats, purpose, participants):
+def _check_seat_request(seats, purpose):
     """The rules about what may be asked for in one seat request."""
-    if participants:
-        raise ApiError('Classmates can only be invited to a study room.',
-                       code='invalid_participants')
     if len(seats) > MAX_SEATS_PER_REQUEST:
         raise ApiError(
             f'One request can cover at most {MAX_SEATS_PER_REQUEST} seats (one table).',
@@ -153,31 +130,6 @@ def _check_seat_request(seats, purpose, participants):
             f'Please give a reason for requesting more than {SEATS_WITHOUT_REASON} seats.',
             code='reason_required',
         )
-
-
-def _check_room_request(room, student, participant_count, participants):
-    if room.status != ResourceStatus.ACTIVE:
-        raise ConflictError(
-            f'{room} is currently {room.get_status_display().lower()}.',
-            code='resource_unavailable',
-        )
-    unique = {p.pk: p for p in participants}
-    if student.pk in unique:
-        raise ApiError('You are already part of the reservation; invite other students.',
-                       code='invalid_participants')
-    for person in unique.values():
-        if not (person.is_student and person.is_active):
-            raise ApiError('Only active student accounts can be invited.',
-                           code='invalid_participants')
-
-    participant_count = max(participant_count, len(unique) + 1)
-    if participant_count > room.capacity:
-        raise ApiError(f'{room.name} holds at most {room.capacity} people.',
-                       code='over_capacity')
-    if participant_count < room.min_occupancy:
-        raise ApiError(f'{room.name} is for groups of at least {room.min_occupancy}.',
-                       code='under_occupancy')
-    return participant_count
 
 
 def _check_student_limits(student, window, policy, now):
@@ -212,32 +164,24 @@ def _check_student_limits(student, window, policy, now):
         )
 
 
-def _check_conflicts(student, seats, room, window):
+def _check_conflicts(student, seats, window):
     """Pending requests hold their places just like confirmed reservations."""
     overlapping = Q(status__in=ACTIVE, start_at__lt=window.end_at, end_at__gt=window.start_at)
 
-    if room is not None:
-        if Reservation.objects.filter(overlapping, room=room).exists():
-            raise ConflictError(
-                'This room is already requested or reserved for all or part of that time. '
-                'Please choose another time.',
-                code='slot_taken',
-            )
-    else:
-        taken = sorted(set(
-            ReservationSeat.objects
-            .filter(seat__in=seats, reservation__status__in=ACTIVE,
-                    reservation__start_at__lt=window.end_at,
-                    reservation__end_at__gt=window.start_at)
-            .values_list('seat__number', flat=True)
-        ))
-        if taken:
-            which = f'Seat {taken[0]} is' if len(taken) == 1 else f'Seats {", ".join(taken)} are'
-            raise ConflictError(
-                f'{which} already requested or reserved for all or part of that time. '
-                'Please choose again.',
-                code='slot_taken',
-            )
+    taken = sorted(set(
+        ReservationSeat.objects
+        .filter(seat__in=seats, reservation__status__in=ACTIVE,
+                reservation__start_at__lt=window.end_at,
+                reservation__end_at__gt=window.start_at)
+        .values_list('seat__number', flat=True)
+    ))
+    if taken:
+        which = f'Seat {taken[0]} is' if len(taken) == 1 else f'Seats {", ".join(taken)} are'
+        raise ConflictError(
+            f'{which} already requested or reserved for all or part of that time. '
+            'Please choose again.',
+            code='slot_taken',
+        )
 
     clash = Reservation.objects.filter(overlapping, student=student).first()
     if clash:
@@ -250,21 +194,14 @@ def _check_conflicts(student, seats, room, window):
 def _claim_slots(reservation, seats):
     """Insert the slot rows. The unique constraints are the final arbiter."""
     starts = slot_starts(reservation.start_at, reservation.end_at)
-    if reservation.room_id:
-        rows = [
-            ReservationSlot(reservation=reservation, room_id=reservation.room_id,
-                            student_id=reservation.student_id, start_at=start)
-            for start in starts
-        ]
-    else:
-        rows = [
-            ReservationSlot(
-                reservation=reservation, seat=seat, start_at=start,
-                # Only the first seat carries the student (see the model).
-                student_id=reservation.student_id if index == 0 else None,
-            )
-            for index, seat in enumerate(seats) for start in starts
-        ]
+    rows = [
+        ReservationSlot(
+            reservation=reservation, seat=seat, start_at=start,
+            # Only the first seat carries the student (see the model).
+            student_id=reservation.student_id if index == 0 else None,
+        )
+        for index, seat in enumerate(seats) for start in starts
+    ]
     try:
         with transaction.atomic():
             ReservationSlot.objects.bulk_create(rows)
@@ -275,16 +212,21 @@ def _claim_slots(reservation, seats):
         ) from exc
 
 
-def create_reservation(*, actor, student, resource_type, window, resource_id=None,
-                       seat_ids=None, participant_count=1, purpose='', participants=(),
-                       request=None):
+def create_reservation(*, actor, student, window, resource_type=Reservation.ResourceType.SEAT,
+                       resource_id=None, seat_ids=None, purpose='', request=None):
     """
     Place a reservation. Raises ApiError/ConflictError if any rule is broken.
 
     A request made by a student is saved as PENDING and waits for a librarian.
     A booking entered by a librarian or admin on a student's behalf is
     CONFIRMED straight away, because the person who approves made it.
+
+    Only seats and computers can be reserved. The library's room is a common
+    space for everyone.
     """
+    if resource_type != Reservation.ResourceType.SEAT:
+        raise ApiError('Rooms cannot be reserved. Please reserve a seat or a computer.',
+                       code='room_not_reservable')
     if actor.is_student:
         if actor.pk != student.pk:
             raise PermissionDenied('You can only make reservations for yourself.')
@@ -297,34 +239,24 @@ def create_reservation(*, actor, student, resource_type, window, resource_id=Non
     process_due_reservations()  # release anything that has just expired
     policy = get_policy()
     now = timezone.now()
-    check_bookable(window, resource_type, policy, now)
-    is_seat = resource_type == Reservation.ResourceType.SEAT
+    check_bookable(window, policy, now)
     by_staff = actor.can_manage_reservations
 
     with transaction.atomic():
-        if is_seat:
-            seats = _lock_seats(seat_ids if seat_ids else [resource_id])
-            room = None
-            _check_seat_request(seats, purpose, list(participants))
-            participant_count = len(seats)
-        else:
-            seats = []
-            room = _lock_room(resource_id)
-            participant_count = _check_room_request(
-                room, student, participant_count, list(participants))
+        seats = _lock_seats(seat_ids if seat_ids else [resource_id])
+        _check_seat_request(seats, purpose)
         _check_student_limits(student, window, policy, now)
-        _check_conflicts(student, seats, room, window)
+        _check_conflicts(student, seats, window)
 
         reservation = Reservation.objects.create(
             code=generate_code(),
             student=student,
             resource_type=resource_type,
-            seat=seats[0] if is_seat else None,
-            room=room,
+            seat=seats[0],
             start_at=window.start_at,
             end_at=window.end_at,
             status=Status.CONFIRMED if by_staff else Status.PENDING,
-            participant_count=participant_count,
+            participant_count=len(seats),
             purpose=purpose.strip(),
             created_by=actor,
             decided_by=actor if by_staff else None,
@@ -334,12 +266,8 @@ def create_reservation(*, actor, student, resource_type, window, resource_id=Non
             [ReservationSeat(reservation=reservation, seat=seat) for seat in seats])
         _claim_slots(reservation, seats)
 
-        invited = list({p.pk: p for p in participants}.values())
-        ReservationParticipant.objects.bulk_create(
-            [ReservationParticipant(reservation=reservation, student=p) for p in invited])
-
         when = describe_time(reservation)
-        label = describe_seats(seats) if is_seat else room.name
+        label = describe_seats(seats)
         link = reservation_link(reservation)
         if by_staff:
             notify(
@@ -347,7 +275,6 @@ def create_reservation(*, actor, student, resource_type, window, resource_id=Non
                 f'{label} is reserved for you on {when}. Booked by {actor.full_name}.',
                 level=Notification.Level.SUCCESS, link=link,
             )
-            _notify_invited(reservation, invited, label, when)
             log_activity(
                 'reservation.created',
                 f'{label} reserved for {student.full_name} on {when} ({reservation.code}).',
@@ -371,15 +298,6 @@ def create_reservation(*, actor, student, resource_type, window, resource_id=Non
                 actor=actor, target=reservation, request=request,
             )
     return reservation
-
-
-def _notify_invited(reservation, invited, label, when):
-    if invited:
-        notify_many(
-            invited, 'You were added to a study room reservation',
-            f'{reservation.student.full_name} invited you to {label} on {when}.',
-            link=reservation_link(reservation),
-        )
 
 
 # ── The librarian's decision ───────────────────────────────────────────────
@@ -414,7 +332,6 @@ def approve_reservation(reservation, *, actor):
             'Remember to check in when you arrive.',
             level=Notification.Level.SUCCESS, link=reservation_link(reservation),
         )
-        _notify_invited(reservation, _participant_users(reservation), label, when)
         log_activity(
             'reservation.approved',
             f'Approved {label} for {reservation.student.full_name} on {when} '
@@ -482,11 +399,6 @@ def _apply_cancel(reservation, actor, reason, now):
         notify(reservation.student, 'Your reservation was cancelled',
                f'{label} on {when} was cancelled by the library.{detail}',
                level=Notification.Level.DANGER, link=link)
-    invited = _participant_users(reservation)
-    if invited:
-        notify_many(invited, 'A study room reservation was cancelled',
-                    f'{label} on {when} was cancelled.',
-                    level=Notification.Level.WARNING, link=link)
     log_activity(
         'reservation.cancelled',
         f'Cancelled {label} for {reservation.student.full_name} on {when} '
@@ -543,13 +455,10 @@ def _cancel_many(queryset, actor, reason):
 
 
 def cancel_for_resource(resource, *, actor, reason):
-    """Cancel upcoming bookings of a seat/room that is going out of service."""
-    lookup = (
-        {'reservation_seats__seat': resource} if isinstance(resource, Seat)
-        else {'room': resource}
-    )
+    """Cancel upcoming bookings of a seat that is going out of service."""
     return _cancel_many(
-        Reservation.objects.filter(status__in=UPCOMING, end_at__gt=timezone.now(), **lookup),
+        Reservation.objects.filter(
+            status__in=UPCOMING, end_at__gt=timezone.now(), reservation_seats__seat=resource),
         actor, reason,
     )
 
@@ -584,27 +493,46 @@ def cancel_outside_schedule(*, actor, reason):
 # ── Check-in, check-out, no-show ───────────────────────────────────────────
 
 def _apply_no_show(reservation, now, actor=None):
-    reservation.status = Status.NO_SHOW
-    reservation.save(update_fields=['status', 'updated_at'])
-    _release_slots(reservation)
-
+    """
+    Release a confirmed reservation nobody arrived for. With no `actor` this is
+    the automatic cancellation after the check-in period.
+    """
     policy = get_policy()
+    automatic = actor is None
+    reservation.status = Status.NO_SHOW
+    if automatic:
+        reservation.cancel_reason = (
+            f'Automatically cancelled: no check-in within {policy.checkin_grace_minutes} '
+            'minutes of the start time.'
+        )
+    reservation.save(update_fields=['status', 'cancel_reason', 'updated_at'])
+    _release_slots(reservation)  # every seat of the reservation is free again
+
     strikes = no_show_count(reservation.student, policy, now)
-    message = (
-        f'You did not check in to {reservation.resource_label} on '
-        f'{describe_time(reservation)}, so it was released.'
-    )
+    if automatic:
+        title = 'Reservation automatically cancelled'
+        message = (
+            f'{reservation.resource_label} on {describe_time(reservation)} was automatically '
+            f'cancelled because you did not check in within {policy.checkin_grace_minutes} '
+            'minutes of the start time.'
+        )
+    else:
+        title = 'Reservation marked as no-show'
+        message = (
+            f'You did not arrive for {reservation.resource_label} on '
+            f'{describe_time(reservation)}, so the library released it.'
+        )
     if policy.no_show_limit:
         message += (
             f' Missed reservations in the last {policy.no_show_window_days} days: '
             f'{strikes} of {policy.no_show_limit}.'
         )
-    notify(reservation.student, 'Reservation marked as no-show', message,
+    notify(reservation.student, title, message,
            level=Notification.Level.DANGER, link=reservation_link(reservation))
     log_activity(
         'reservation.no_show',
         f'{reservation.student.full_name} did not check in to {reservation.resource_label} '
-        f'({reservation.code}).',
+        f'({reservation.code})' + ('; cancelled automatically.' if automatic else '.'),
         actor=actor, target=reservation,
     )
 
@@ -684,7 +612,7 @@ def check_in(reservation, *, actor):
             )
     if expired:
         raise ApiError(
-            'The check-in period for this reservation has ended and it was released.',
+            'The 15-minute check-in period has ended, so this reservation was cancelled.',
             code='checkin_closed',
         )
     return reservation
@@ -750,8 +678,9 @@ def process_due_reservations(now=None):
     policy = get_policy()
     result = {'expired': 0, 'no_shows': 0, 'completed': 0, 'reminders': 0}
 
+    overdue_start = now - timedelta(minutes=policy.checkin_grace_minutes)
     started = Reservation.objects.filter(
-        status__in=(Status.PENDING, Status.CONFIRMED), start_at__lte=now)
+        status__in=(Status.PENDING, Status.CONFIRMED), start_at__lte=overdue_start)
     for pk in list(started.values_list('pk', flat=True)):
         with transaction.atomic():
             reservation = Reservation.objects.select_for_update().get(pk=pk)
@@ -779,6 +708,12 @@ def process_due_reservations(now=None):
             start_at__gt=now, start_at__lte=now + lead,
         ).select_related('student', 'seat', 'room')
         for reservation in due:
+            # Claim the reminder first, so two server processes cannot both send it.
+            claimed = Reservation.objects.filter(
+                pk=reservation.pk, reminder_sent_at__isnull=True,
+            ).update(reminder_sent_at=now)
+            if not claimed:
+                continue
             # No reminder for a booking made inside the reminder window.
             if reservation.created_at <= reservation.start_at - lead:
                 start = timezone.localtime(reservation.start_at)
@@ -789,6 +724,5 @@ def process_due_reservations(now=None):
                     level=Notification.Level.WARNING, link=reservation_link(reservation),
                 )
                 result['reminders'] += 1
-            Reservation.objects.filter(pk=reservation.pk).update(reminder_sent_at=now)
 
     return result

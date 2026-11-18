@@ -3,13 +3,13 @@
 A real-time booking application for DLL Library, the library of Dalubhasaan ng
 Lungsod ng Lucena. Visitors see a public website with the library's services,
 rules, personnel, hours and contact details. Students request
-seats, whole tables, computers or the study room for their preferred schedule;
+seats, whole tables or computers for their preferred schedule;
 the Librarian approves or rejects each request; Student Assistants help with
 daily operations; and an administrator manages accounts, seating and rules.
 
 The system models the actual library: **one floor (First Floor)**, a **Reading
 Hall with 15 tables of 6 chairs (90 seats)**, a **Computer Area with 4
-computers**, and one study room.
+computers**. The library's one room is a common space and is not reservable.
 
 - **Backend:** Django 6.1 + Django REST Framework (`backend/`)
 - **Frontend:** React 19 + Vite 8, installable as a Progressive Web App (`frontend/`)
@@ -75,8 +75,7 @@ or choose your own with `--password`):
 | Student Assistant | `assistant@library.edu` | Helps with check-ins and monitoring |
 | Student | `student1@university.edu` ... `student24@university.edu` | |
 
-The command also runs `setup_library` (see below), creates the study room if
-there is none, and adds three weeks of past reservations so the reports have
+The command also runs `setup_library` (see below) and adds three weeks of past reservations so the reports have
 data. Run it again during opening hours on the day of a demonstration and it
 adds seats in use "right now" plus a few pending requests for the Librarian to
 approve. It never duplicates existing data, and it does not change accounts
@@ -89,7 +88,6 @@ that already exist (for example, ones you have deactivated).
 - First Floor only
 - Reading Hall: tables 1-15, six chairs each, numbered `T01-1` ... `T15-6` (90 seats)
 - Computer Area: `PC-1` ... `PC-4`
-- one study room
 
 Floors, zones, seats and rooms that are not part of this are **archived, not
 deleted**: they disappear from every screen and report, but past reservations
@@ -124,7 +122,8 @@ themselves.)
 | Load demo data | `backend`: `python manage.py seed_demo` |
 | Start the backend | `backend`: `python manage.py runserver` |
 | Run backend tests | `backend`: `python manage.py test` |
-| Process due reservations manually | `backend`: `python manage.py process_reservations` |
+| Process due reservations once, by hand | `backend`: `python manage.py process_reservations` |
+| Run the no-show scheduler as its own process (optional) | `backend`: `python manage.py run_reservation_scheduler` |
 | Install frontend dependencies | `frontend`: `npm install` |
 | Start the frontend (development) | `frontend`: `npm run dev` |
 | Check code style | `frontend`: `npm run lint` |
@@ -238,7 +237,7 @@ ProjectManagement/
 │   ├── library/           Floor, opening hours, closures, booking rules,
 │   │                      the real seating layout (setup_library), seed_demo
 │   ├── seats/             Zones, tables and seats, seat map availability
-│   ├── study_rooms/       The study room and its facilities
+│   ├── study_rooms/       Past room reservations only (rooms cannot be reserved)
 │   ├── reservations/      Reservations and all booking rules (the core)
 │   ├── notifications/     In-app notifications
 │   ├── activity/          Audit log
@@ -254,11 +253,10 @@ ProjectManagement/
         │   ├── layout/        Sidebar, top bar, route guards
         │   ├── reservations/  Date/time picker, cards, actions, QR pass, timeline
         │   ├── seats/         Seat map, seat dialog, seat forms
-        │   ├── rooms/         Room card, invite list
         │   └── dashboard/     Stat tiles, occupancy meter, charts
         ├── pages/
         │   ├── auth/          Login, registration
-        │   ├── booking/       Seat map, room list, room page (all roles)
+        │   ├── booking/       Seat map (all roles)
         │   ├── student/       Student dashboard, my reservations
         │   ├── librarian/     Operations dashboard, check-in desk, reservations,
         │   │                  reports, seat management
@@ -283,7 +281,7 @@ rules live in `reservations/services.py`, not in the views.
 | | Student | Student Assistant | Librarian | Admin |
 |---|:-:|:-:|:-:|:-:|
 | Register themselves | yes | no | no | no |
-| Request seats, tables, computers, the room; check in/out; cancel own | yes | - | - | - |
+| Request seats, tables, computers; check in/out; cancel own | yes | - | - | - |
 | See all reservations, the live seat map and who is seated | - | yes | yes | yes |
 | Check students in and out | - | yes | yes | yes |
 | **Approve or reject requests** | - | **no** | **yes** | yes |
@@ -328,7 +326,6 @@ PENDING ──librarian approves──▶ CONFIRMED ──check in──▶ CHEC
 | 3 to 5 seats | Yes |
 | A whole table (6 seats) | Yes |
 | 1 computer | No (only one computer per request, and per student at a time) |
-| The study room | Purpose is optional |
 
 One request covers at most six seats, all in the same area. The reason is shown
 to the Librarian on the dashboard and on the request page.
@@ -338,7 +335,7 @@ to the Librarian on the dashboard and on the request page.
 | Event | Who is notified |
 |---|---|
 | Student submits a request | Every active Librarian and Admin, and the student (request received) |
-| Librarian approves | The student (and classmates invited to the room) |
+| Librarian approves | The student |
 | Librarian rejects | The student, with the reason |
 | Cancelled by staff, expired, no-show, reminder, checked in | The student |
 
@@ -350,7 +347,7 @@ to its reservation.
 - Times are in 30-minute slots, inside opening hours, not on a closure day.
 - Not in the past (the slot currently in progress may still be requested, for walk-ins).
 - Within the advance-booking limit and the minimum/maximum duration.
-- Every seat is in service and exists in the current layout; a room's group size fits its capacity.
+- Every seat is in service and exists in the current layout.
 - More than two seats needs a reason; computers are one at a time.
 - The student is within their limits (active reservations, per day) and is not
   suspended for repeated no-shows.
@@ -365,22 +362,49 @@ All limits are settings the Admin can change (Library Settings > Reservation rul
    overlapping pending or confirmed reservation on each seat before saving.
 2. On top of that, every active reservation owns one row per seat per
    30-minute slot in the `ReservationSlot` table, which has a **unique
-   constraint** on (seat, slot) and (room, slot). If two requests ever got past
+   constraint** on (seat, slot). If two requests ever got past
    step 1 at the same instant, the database itself rejects the second one.
 
-### Check-in, no-shows and automatic updates
+### Check-in and the 15-minute rule
 
-- Check-in opens 10 minutes before the start and closes 15 minutes after
-  (configurable; for a request approved late, the 15 minutes count from the
-  approval). Students check in from the app; staff, including Student
-  Assistants, can do it at the desk by typing or scanning the reservation code.
-- A confirmed reservation nobody checks in to becomes a **no-show**: the place
-  is released, the student is notified, and it counts towards the no-show limit.
+- Check-in opens 10 minutes before the start (configurable) and closes **exactly
+  15 minutes after the start time**, whenever the reservation was booked or
+  approved. Students check in from the app; staff, including Student Assistants,
+  can do it at the desk by typing or scanning the reservation code.
+- A confirmed reservation nobody has checked in to by then is **automatically
+  cancelled as a No-show**. All of its seats (or its computer) are released for
+  the remaining time, the student is notified once, and it counts towards the
+  no-show limit. A later check-in is refused.
+- A request still *Pending* at that moment simply expires: no strike.
 - A checked-in reservation is completed automatically at its end time.
-- These time-based changes are applied by a lightweight step that runs before
-  API requests (at most every 10 seconds), so no background worker is needed.
-  On a production server the same job can be scheduled instead:
-  `python manage.py process_reservations`.
+
+### The background scheduler
+
+The server does this on its own, every 30 seconds, without a browser, a visitor
+or any page being open (`reservations/scheduler.py`).
+
+- **It starts by itself with the web server.** `python manage.py runserver`,
+  waitress and gunicorn all include it. No extra program or service is needed.
+- **The Django server must be running.** While it is off nothing can be
+  processed; anything overdue is handled within seconds of the next start.
+- To confirm it is running, open `/api/health/` and look for
+  `"scheduler": {"running": true, ...}`.
+- Optional: to run it as a separate process, set
+  `RESERVATION_SCHEDULER_ENABLED=False` and run
+  `python manage.py run_reservation_scheduler`. The interval is
+  `RESERVATION_SCHEDULER_INTERVAL_SECONDS`.
+- Each reservation is re-checked inside a locked database transaction, so running
+  several copies cannot process a reservation or notify a student twice.
+
+### Seat and table availability (Manage Seats)
+
+- **One seat:** the *Availability* button changes that seat only.
+- **Whole table:** *Manage table* takes all six seats out of service, or restores
+  them, as one all-or-nothing operation. A seat that was already out of service
+  on its own stays that way when the table is restored.
+- **Reservations are never cancelled silently.** The dialog lists who is affected
+  and the change only goes ahead once confirmed; those students are notified. A
+  seat someone is checked in to cannot be taken out of service.
 
 ### Real-time updates
 
@@ -408,12 +432,11 @@ for a taken seat is refused.
 | `LandingPhoto` (library) | A photo of the library shown on the website | |
 | `Zone` (seats) | A seating area: Reading Hall or Computer Area | belongs to a floor; has many seats |
 | `Seat` (seats) | One chair or computer, with its table number, map position, features and status | belongs to a zone |
-| `Facility` (study_rooms) | Equipment such as a whiteboard | many-to-many with rooms |
-| `StudyRoom` (study_rooms) | The bookable room with capacity and status | belongs to a floor |
+| `StudyRoom`, `Facility` (study_rooms) | Kept only so past room reservations stay readable; all archived | |
 | `Reservation` (reservations) | A request by one student for a time range, with its status, the Librarian's decision and history timestamps | student -> User; decided_by -> User; room -> StudyRoom |
 | `ReservationSeat` (reservations) | One seat of a seat reservation (1 to 6 per request) | reservation, seat |
 | `ReservationSlot` (reservations) | One row per seat (or room) per 30-minute slot of an active reservation; the double-booking guard | reservation, seat/room, student |
-| `ReservationParticipant` (reservations) | A classmate invited to a room reservation | reservation <-> User |
+| `ReservationParticipant` (reservations) | History of classmates invited to past room reservations | reservation <-> User |
 | `Notification` (notifications) | A message for one user | belongs to a user |
 | `ActivityLog` (activity) | Who did what, and when | actor -> User (optional) |
 
@@ -445,8 +468,7 @@ health requires `Authorization: Bearer <access token>`.
 | Library | `GET library/overview/`, `GET/PUT library/hours/`, `GET/PATCH library/policy/`, `library/closures/`, `library/floors/` |
 | Website | `GET library/public/` (no sign-in), Admin: `GET/PATCH library/profile/`, `library/landing-items/`, `library/personnel/`, `library/photos/` (CRUD, `POST .../reorder/`) |
 | Seats | `GET seats/availability/?date&start&end`, `GET seats/{id}/schedule/?date`, `seats/` and `seats/zones/` (CRUD), `POST seats/{id}/set-status/` |
-| Study room | `GET study-rooms/availability/?date&start&end`, `GET study-rooms/{id}/schedule/?date`, `GET study-rooms/` |
-| Reservations | `GET/POST reservations/` (`seats: [ids]` or `room`), `GET reservations/{id}/`, `POST reservations/{id}/approve/`, `reject/`, `cancel/`, `check-in/`, `check-out/`, `no-show/`; `GET reservations/lookup/?code`, `GET reservations/limits/` |
+| Reservations | `GET/POST reservations/` (`seats: [ids]`), `GET reservations/{id}/`, `POST reservations/{id}/approve/`, `reject/`, `cancel/`, `check-in/`, `check-out/`, `no-show/`; `GET reservations/lookup/?code`, `GET reservations/limits/` |
 | Notifications | `GET notifications/`, `GET notifications/unread-count/`, `POST notifications/{id}/read/`, `POST notifications/read-all/`, `DELETE notifications/{id}/` |
 | Reports | `GET reports/student-dashboard/`, `staff-dashboard/`, `admin-dashboard/`, `usage/?days=7|14|30|90` |
 | Activity (admin) | `GET activity/` |
@@ -475,21 +497,22 @@ Lists are paginated: `{ "count", "next", "previous", "results" }`.
   and settings forms is saved as you type and restored after a refresh. Drafts
   are stored per user, never include passwords, are cleared after a successful
   submit or cancel, and are all removed when you sign out.
-- **Data.** Accounts, seats, rooms, reservations, notifications and logs live
+- **Data.** Accounts, seats, reservations, notifications and logs live
   only in the Django database. The browser stores nothing but form drafts.
 - Passwords are hashed and checked against Django's password validators;
   login and registration are rate-limited.
 
-## 11. Deploying (outline)
+## 11. Deploying
 
-1. Set `DJANGO_DEBUG=False`, a new `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
-   `REFRESH_COOKIE_SECURE=True`, and a production database.
-2. Serve Django with a production server (for example gunicorn or waitress).
-3. `npm run build` and serve `frontend/dist/` as static files, sending unknown
-   paths to `index.html` so that page URLs work on refresh.
-4. Serve both from the same domain over HTTPS (frontend at `/`, API at `/api/`),
-   or set `VITE_API_BASE_URL` and `CORS_ALLOWED_ORIGINS` if they are on
-   different domains.
-5. Serve uploaded files from `backend/media/` at `/media/` (personnel and
-   library photos). Django only serves them itself when `DJANGO_DEBUG=True`.
-6. Schedule `python manage.py process_reservations` every minute.
+Step-by-step instructions for Render are in
+[docs/RENDER_DEPLOYMENT_GUIDE.md](docs/RENDER_DEPLOYMENT_GUIDE.md). The services
+are described in `render.yaml`.
+
+| Task | `backend` command |
+|---|---|
+| Back up the database to `backup.json` | `python manage.py create_backup` |
+| Restore it into a new, migrated database (once) | `python manage.py restore_backup backup.json` |
+
+`backup.json` holds personal data and is ignored by git. Uploaded photos are not
+inside it: back up `backend/media/` separately.
+

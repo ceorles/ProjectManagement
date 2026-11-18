@@ -14,11 +14,11 @@ function dayLabel(date, today) {
  * Choose when: a date, a start time and how long. Only dates and times the
  * library is open and that the booking rules allow are offered.
  */
-export default function BookingWindowPicker({ resourceType, window, onChange }) {
+export default function BookingWindowPicker({ window, onChange }) {
   const { overview, now, policy } = useLibrary()
   const dates = bookableDates(overview, now)
   const starts = startTimes(overview, window.date, now)
-  const lengths = durations(overview, window.date, window.start, resourceType)
+  const lengths = durations(overview, window.date, window.start)
 
   if (!dates.some((item) => item.isOpen)) {
     return (

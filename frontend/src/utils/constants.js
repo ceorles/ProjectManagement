@@ -18,7 +18,7 @@ export const RESERVATION_STATUS = {
   no_show: { label: 'No-show', tone: 'orange' },
 }
 
-/** State of a seat or room for the selected time window. */
+/** State of a seat for the selected time window. */
 export const AVAILABILITY = {
   available: { label: 'Available', tone: 'green' },
   reserved: { label: 'Reserved', tone: 'yellow' },
@@ -31,6 +31,14 @@ export const RESOURCE_STATUS = {
   active: { label: 'In service', tone: 'green' },
   maintenance: { label: 'Maintenance', tone: 'orange' },
   inactive: { label: 'Out of service', tone: 'gray' },
+}
+
+/** How a whole table stands, from its six seats. */
+export const TABLE_STATE = {
+  available: { label: 'Fully available', tone: 'green' },
+  reserved: { label: 'Has reservations', tone: 'blue' },
+  partial: { label: 'Partially available', tone: 'orange' },
+  out_of_service: { label: 'Out of service', tone: 'red' },
 }
 
 export const ZONE_TYPES = {
@@ -50,7 +58,7 @@ export const ACTIVITY_CATEGORIES = {
   auth: 'Sign-ins',
   user: 'Accounts',
   reservation: 'Reservations',
-  resource: 'Seats and rooms',
+  resource: 'Seats',
   settings: 'Library settings',
 }
 

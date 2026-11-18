@@ -10,7 +10,8 @@ the `/api/` prefix.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve
 
 from config.views import health
 
@@ -20,7 +21,6 @@ api_patterns = [
     path('users/', include('users.urls')),
     path('library/', include('library.urls')),
     path('seats/', include('seats.urls')),
-    path('study-rooms/', include('study_rooms.urls')),
     path('reservations/', include('reservations.urls')),
     path('notifications/', include('notifications.urls')),
     path('activity/', include('activity.urls')),
@@ -32,5 +32,10 @@ urlpatterns = [
     path('api/', include(api_patterns)),
 ]
 
-# Uploaded images during development. In production the web server serves MEDIA_ROOT.
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Uploaded images (library personnel, landing page photos).
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    ]

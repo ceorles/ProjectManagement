@@ -16,8 +16,6 @@ import {
 // small on phones. <AppLayout> shows a loading state while one is fetched.
 const DashboardPage = lazy(() => import('./pages/shared/DashboardPage'))
 const SeatBookingPage = lazy(() => import('./pages/booking/SeatBookingPage'))
-const RoomsPage = lazy(() => import('./pages/booking/RoomsPage'))
-const RoomDetailPage = lazy(() => import('./pages/booking/RoomDetailPage'))
 const ReservationDetailPage = lazy(() => import('./pages/shared/ReservationDetailPage'))
 const NotificationsPage = lazy(() => import('./pages/shared/NotificationsPage'))
 const ProfilePage = lazy(() => import('./pages/shared/ProfilePage'))
@@ -30,13 +28,6 @@ const UsersPage = lazy(() => import('./pages/admin/UsersPage'))
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'))
 const ActivityLogPage = lazy(() => import('./pages/admin/ActivityLogPage'))
 
-/**
- * Route map. Each page has its own URL, so a refresh, a bookmark or the
- * browser's back button always lands on the same page.
- *
- * The guards only decide what to *show*. Every API request is checked again
- * by the backend, which is what actually enforces the roles.
- */
 export default function App() {
   return (
     <BrowserRouter>
@@ -56,8 +47,6 @@ export default function App() {
               {/* Every signed-in user */}
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/seats" element={<SeatBookingPage />} />
-              <Route path="/rooms" element={<RoomsPage />} />
-              <Route path="/rooms/:id" element={<RoomDetailPage />} />
               <Route path="/reservations/:id" element={<ReservationDetailPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/profile" element={<ProfilePage />} />

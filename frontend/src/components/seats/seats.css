@@ -110,15 +110,40 @@
   box-shadow: 0 0 0 1px currentColor;
 }
 
-/* A table: the shared surface behind its chairs, with the table's name. */
+/*
+ * Tables: every table is one card holding its own six chairs, so the seats of
+ * different tables can never mix. The chairs size themselves from the space
+ * available, keeping three tables side by side on a phone as well.
+ */
+.seat-tables {
+  --table-cols: 3;
+  --table-gap: clamp(8px, 3cqi, 28px);
+  --table-pad: clamp(3px, 1cqi, 8px);
+  --gap: clamp(3px, 1cqi, 8px);
+  --seat: clamp(24px, calc((100cqi - 8px - (var(--table-cols) - 1) * var(--table-gap)
+    - var(--table-cols) * (2 * var(--table-pad) + 2 * var(--gap) + 2px)) / (var(--table-cols) * 3)), 46px);
+  display: grid;
+  grid-template-columns: repeat(var(--table-cols), max-content);
+  gap: var(--table-gap);
+  justify-content: center;
+}
+
+@container (max-width: 279px) {
+  .seat-tables { --table-cols: 2; }
+}
+
 .seat-table {
   display: grid;
-  place-items: center;
-  margin: -3px;
+  grid-template-columns: repeat(3, var(--seat));
+  gap: var(--gap);
+  padding: var(--table-pad);
   border: 1px solid var(--blue-200);
   border-radius: 10px;
   background: var(--blue-50);
 }
+
+.seat-table .seat { height: var(--seat); }
+.seat-table__top { grid-column: 1 / -1; display: grid; place-items: center; min-height: calc(var(--seat) * 0.62); }
 
 .seat-table__label {
   padding: 0 6px;
@@ -208,3 +233,43 @@ button.seat-table__label:disabled { color: var(--gray-500); cursor: not-allowed;
 
 .zone-card:hover { border-color: var(--blue-300); }
 .zone-card.is-active { border-color: var(--blue-600); box-shadow: 0 0 0 3px var(--blue-100); }
+
+/* Each table's seats, listed together under the table's own heading. */
+.table-groups { display: flex; flex-direction: column; gap: 14px; padding: 0 20px 20px; }
+.table-group { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+
+.table-group__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-group__title { font-size: var(--text-base); }
+.table-group__meta { color: var(--color-text-muted); font-size: var(--text-sm); }
+.table-group__action { margin-left: auto; }
+
+.table-seats { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+.table-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--gray-50);
+  font-size: var(--text-sm);
+}
+
+.affected-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.affected-list li { padding-top: 6px; border-top: 1px solid var(--yellow-200); }
+
+@media (max-width: 639px) {
+  .table-groups { padding: 0 12px 12px; }
+  .table-group__action { margin-left: 0; width: 100%; }
+  .table-group__action .btn { width: 100%; }
+}

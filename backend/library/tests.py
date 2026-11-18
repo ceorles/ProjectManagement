@@ -31,7 +31,7 @@ class LibrarySettingsTests(PortalTestCase):
         ragged = self.client.patch('/api/library/policy/', {'max_seat_duration_minutes': 45})
         self.assertEqual(ragged.status_code, 400)
         inverted = self.client.patch(
-            '/api/library/policy/', {'min_duration_minutes': 120, 'max_room_duration_minutes': 60})
+            '/api/library/policy/', {'min_duration_minutes': 120, 'max_seat_duration_minutes': 60})
         self.assertEqual(inverted.status_code, 400)
 
     def test_only_admin_can_change_hours_and_closures(self):

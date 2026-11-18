@@ -28,18 +28,18 @@ SUBTITLE = 'Stakeholder: the School Library'
 INTRO = (
     'This document lists the functional requirements of the Library Seat & Study Room '
     'Reservation Portal of DLL Library (Dalubhasaan ng Lungsod ng Lucena), a web application '
-    'that lets students request library seats, tables, computers and the study room, and '
+    'that lets students request library seats, whole tables and computers, and '
     'lets the library staff review and manage those requests. It also includes a public '
     "website with the library's information. The requirements describe the system as it is "
     'implemented. They reflect the '
     'actual library: one floor (First Floor), a Reading Hall with 15 tables of 6 chairs '
-    '(90 seats), a Computer Area with 4 computers, and one study room.'
+    '(90 seats) and a Computer Area with 4 computers.'
 )
 ROLES = [
     ('Admin', 'Manages accounts, library settings and seating, and has access to every function.'),
     ('Librarian', 'Approves or rejects reservation requests and runs daily library operations.'),
     ('Student Assistant', 'A student who helps the Librarian monitor seats and check students in.'),
-    ('Student', 'Requests seats, tables, computers or the study room and manages own reservations.'),
+    ('Student', 'Requests seats, tables or computers and manages own reservations.'),
 ]
 
 # (section title, [(requirement, description), ...])
@@ -82,7 +82,10 @@ SECTIONS = [
         ('Seat Features', 'A seat can be marked as having a power outlet, having a computer, or being wheelchair accessible.'),
         ('Seating Zone Management', 'Authorized staff can add, edit and delete seating zones.'),
         ('Seat Maintenance Status', 'Authorized staff can mark a seat as under maintenance or out of service, with a note for students.'),
-        ('Reservations Affected by Maintenance', 'When a seat is taken out of service, its upcoming reservations are cancelled and the students are notified.'),
+        ('Whole-Table Availability', 'Authorized staff can take all six seats of a table out of service, or restore them, in one action.'),
+        ('Table Status Display', 'The system shows whether each table is fully available, partially available, reserved or out of service.'),
+        ('Independent Seat Availability', 'A seat that was out of service on its own stays out of service when its table is restored.'),
+        ('Reservations Affected by Maintenance', 'Before a seat or table is taken out of service, staff see the reservations affected and must confirm; those students are then notified.'),
         ('Preservation of History', 'Seats and zones that are no longer used are archived instead of deleted, so past reservations remain on record.'),
     ]),
     ('Reservation Scheduling Rules', [
@@ -116,13 +119,6 @@ SECTIONS = [
         ('No Overlapping Computer Use', 'A student cannot hold two computers for overlapping times.'),
         ('Approval of Computer Requests', 'Computer reservations follow the same Librarian approval process as seat reservations.'),
     ]),
-    ('Study Room Reservation', [
-        ('Study Room Availability', 'Users can see whether the library\'s study room is available for a chosen date and time.'),
-        ('Study Room Details and Schedule', 'Users can view the room\'s capacity, facilities and its schedule for the chosen day.'),
-        ('Study Room Request', 'Students can request the study room by giving the number of people and the purpose.'),
-        ('Group Size Rule', 'The system checks that the number of people fits the room\'s minimum group size and capacity.'),
-        ('Inviting Classmates', 'Students can add classmates to a room request by entering their student IDs.'),
-    ]),
     ('Reservation Approval and Management', [
         ('Pending Status on Submission', 'Every reservation request submitted by a student is saved with the status Pending.'),
         ('No Automatic Confirmation', 'A student\'s request is never shown as Confirmed until a Librarian approves it.'),
@@ -151,7 +147,6 @@ SECTIONS = [
         ('Cancellation and Expiry Notifications', 'The student is notified when their reservation is cancelled or their request expires.'),
         ('Reminder Notification', 'The student is reminded shortly before a confirmed reservation starts.'),
         ('Check-in and No-Show Notifications', 'The student is notified when they are checked in and when a reservation is marked as a no-show.'),
-        ('Invitation Notification', 'A classmate added to a study room reservation is notified.'),
         ('Unread Notification Count', 'The system shows the number of unread notifications on the notification bell and in the menu.'),
         ('Notification List', 'Users can view their notifications, mark them as read and delete them.'),
         ('Link to Reservation', 'Selecting a notification opens the reservation it refers to.'),
@@ -159,13 +154,15 @@ SECTIONS = [
     ]),
     ('Check-in and Library Operations', [
         ('Student Self Check-in', 'A student can check in to their confirmed reservation during the check-in period.'),
-        ('Check-in Period', 'Check-in opens shortly before the start time and closes after a grace period.'),
+        ('Check-in Period', 'Check-in opens shortly before the start time and closes exactly 15 minutes after the start time.'),
         ('Check-in Code', 'A confirmed reservation shows its code as text and as a QR code for the student to present.'),
         ('Check-in Desk', 'Library staff can find a reservation by entering its code and confirm the student\'s arrival.'),
         ('Check-in by Staff', 'A Librarian, a Student Assistant or the Admin can check a student in.'),
         ('Check-out', 'A student or a staff member can check out, which ends the reservation and frees the seat.'),
         ('Automatic Completion', 'A checked-in reservation is completed automatically when its end time is reached.'),
-        ('Automatic No-Show', 'A confirmed reservation that is not checked in during the check-in period is marked as a no-show and its seat is released.'),
+        ('Automatic No-Show Cancellation', 'The server automatically cancels a confirmed reservation as a no-show when nobody checks in within 15 minutes of the start time.'),
+        ('Release After No-Show', 'All seats or the computer of a no-show reservation become available to other students for the remaining time.'),
+        ('No-Show Notification', 'The student is notified that the reservation was automatically cancelled and why.'),
         ('Manual No-Show', 'A Librarian or the Admin can mark a reservation as a no-show after it has started.'),
         ('Live Occupancy Monitoring', 'Library staff can see how many seats and computers are occupied, reserved, available and unavailable.'),
         ('Occupant Information for Staff', 'Library staff can see which student has requested or is using a seat.'),

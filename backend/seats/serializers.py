@@ -55,11 +55,11 @@ class SeatSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'number', 'zone', 'zone_name', 'floor', 'floor_name', 'row', 'col',
             'table_number', 'has_power_outlet', 'has_computer', 'is_accessible',
-            'status', 'status_label', 'status_note', 'created_at', 'updated_at',
+            'status', 'status_label', 'status_note', 'out_with_table', 'created_at', 'updated_at',
         ]
         # Status changes go through the set-status action so that affected
-        # reservations are cancelled and students are told.
-        read_only_fields = ['status', 'status_note', 'created_at', 'updated_at']
+        # reservations are handled and students are told.
+        read_only_fields = ['status', 'status_note', 'out_with_table', 'created_at', 'updated_at']
         extra_kwargs = {'number': {'validators': []}}
 
     def validate_number(self, value):
@@ -91,7 +91,20 @@ class SeatSerializer(serializers.ModelSerializer):
 
 
 class ResourceStatusSerializer(serializers.Serializer):
-    """Body of the set-status action for seats and study rooms."""
+    """Body of the set-status action for one seat."""
 
     status = serializers.ChoiceField(choices=ResourceStatus.choices)
     note = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
+    # Must be sent as true to go ahead when upcoming reservations would be cancelled.
+    confirm_cancellations = serializers.BooleanField(required=False, default=False)
+
+
+class TableStatusSerializer(serializers.Serializer):
+    """Body of the action that takes a whole table out of service or restores it."""
+
+    zone = serializers.IntegerField()
+    table_number = serializers.IntegerField(min_value=1)
+    status = serializers.ChoiceField(
+        choices=[ResourceStatus.ACTIVE, ResourceStatus.INACTIVE])
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
+    confirm_cancellations = serializers.BooleanField(required=False, default=False)

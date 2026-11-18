@@ -56,6 +56,8 @@ class ClosureSerializer(serializers.ModelSerializer):
 
 
 class ReservationPolicySerializer(serializers.ModelSerializer):
+    checkin_grace_minutes = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = ReservationPolicy
         exclude = ['id']

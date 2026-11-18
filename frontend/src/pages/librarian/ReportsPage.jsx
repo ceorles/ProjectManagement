@@ -28,7 +28,7 @@ export default function ReportsPage() {
     <>
       <PageHeader
         title="Reports"
-        description="How seats and study rooms are being used."
+        description="How seats and computers are being used."
         actions={<Tabs tabs={PERIODS} value={days} onChange={setDays} label="Period" />}
       />
 
@@ -50,7 +50,7 @@ export default function ReportsPage() {
               </p>
               <div className="stat-grid">
                 <StatCard icon={CalendarCheck} label="Reservations" value={totals.total}
-                  hint={`${totals.seat} seats · ${totals.room} rooms`} />
+                  hint={`${totals.seat} seats · ${totals.computer} computers`} />
                 <StatCard icon={GraduationCap} label="Students served" value={totals.unique_students} tone="green" />
                 <StatCard icon={Clock} label="Hours used" value={totals.hours_used} tone="yellow"
                   hint={`${totals.hours_booked} hours booked`} />
@@ -86,7 +86,7 @@ export default function ReportsPage() {
 
               <div className="grid-3">
                 <Card title="Most-used seats"><BarList items={data.top_seats} /></Card>
-                <Card title="Most-used rooms"><BarList items={data.top_rooms} /></Card>
+                <Card title="Most-used computers"><BarList items={data.top_computers} /></Card>
                 <Card title="Seat use by zone"><BarList items={data.by_zone} /></Card>
               </div>
 

@@ -1,5 +1,5 @@
 import {
-  Armchair, CalendarCheck, CalendarClock, ChartColumn, DoorOpen, GraduationCap, Users,
+  Armchair, CalendarCheck, CalendarClock, ChartColumn, GraduationCap, Monitor, Users,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Button from '../../components/common/Button'
@@ -38,14 +38,14 @@ export default function AdminDashboard() {
                 tone="green" to="/manage/reservations"
                 hint={`${data.totals.pending_requests} awaiting approval`} />
               <StatCard icon={Armchair} label="Seats" value={data.totals.seats} to="/manage/seats" />
-              <StatCard icon={DoorOpen} label="Study room" value={data.totals.rooms} to="/rooms" />
+              <StatCard icon={Monitor} label="Computers" value={data.totals.computers} to="/manage/seats" />
               <StatCard icon={CalendarCheck} label="Reservations today" value={data.totals.reservations_today}
                 tone="yellow" to="/manage/reservations" />
             </div>
 
             <div className="grid-2">
               <Card><OccupancyMeter title="Seats right now" data={data.occupancy.seats} to="/seats" /></Card>
-              <Card><OccupancyMeter title="Study room right now" data={data.occupancy.rooms} to="/rooms" /></Card>
+              <Card><OccupancyMeter title="Computers right now" data={data.occupancy.computers} to="/seats" /></Card>
             </div>
 
             <div className="split">
@@ -57,8 +57,8 @@ export default function AdminDashboard() {
                   <Card title="Most-used seats" subtitle="Last 30 days">
                     <BarList items={data.top_seats} />
                   </Card>
-                  <Card title="Most-used rooms" subtitle="Last 30 days">
-                    <BarList items={data.top_rooms} />
+                  <Card title="Most-used computers" subtitle="Last 30 days">
+                    <BarList items={data.top_computers} />
                   </Card>
                 </div>
               </div>

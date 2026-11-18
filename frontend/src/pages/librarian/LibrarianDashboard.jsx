@@ -53,14 +53,14 @@ export default function LibrarianDashboard() {
                 to="/manage/reservations"
                 hint={`${data.today.no_show} no-show${data.today.no_show === 1 ? '' : 's'}`} />
               <StatCard icon={UserCheck} label="Checked in now" tone="green"
-                value={data.occupancy.seats.occupied + data.occupancy.rooms.occupied} />
+                value={data.occupancy.seats.occupied + data.occupancy.computers.occupied} />
               <StatCard icon={Hourglass} label="Awaiting check-in" tone="yellow"
                 value={data.awaiting_check_in.length} hint="Started, nobody arrived yet" />
             </div>
 
             <div className="grid-2">
               <Card><OccupancyMeter title="Seats right now" data={data.occupancy.seats} to="/seats" /></Card>
-              <Card><OccupancyMeter title="Study room right now" data={data.occupancy.rooms} to="/rooms" /></Card>
+              <Card><OccupancyMeter title="Computers right now" data={data.occupancy.computers} to="/seats" /></Card>
             </div>
 
             <div className="split">

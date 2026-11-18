@@ -4,21 +4,83 @@ Library Seat & Study Room Reservation Portal. This file records what is built,
 what has been verified, and what is left. Updated at the end of each work
 session.
 
-**Last updated:** 2026-11-17
+**Last updated:** 2026-11-18
 
 ## Status at a glance
 
 | Area | State |
 |---|---|
-| Backend (Django REST API) | Complete. 160 automated tests pass. |
+| Backend (Django REST API) | Complete. 192 automated tests pass. |
 | Frontend (React + Vite) | Complete. Builds, and lints with no warnings. |
 | Library revision (real stakeholder data) | Complete and tested (details below). |
 | PWA (manifest, service worker, icons) | Complete (unchanged by the revision). |
 | Public website (landing page) | Complete and tested (revision 2, below). |
-| Documentation | `README.md`, `frontend/README.md`, `docs/Functional_Requirements.pdf` and `.md` (140 requirements). |
+| Documentation | `README.md`, `frontend/README.md`, `docs/Functional_Requirements.pdf` and `.md` (see `docs/`). |
 
-Revision 2 is in the working tree and **not committed yet** (revision 1 is in
-the last commit, so the changes can be reviewed with `git diff`).
+Revisions 3 and 4 are in the working tree and **not committed yet** (revision 2
+is in the last commit, so the changes can be reviewed with `git diff`).
+
+## Session of 2026-11-18: revision 4 (QR camera, backup, Render)
+
+1. **Camera QR scanner** on the Check-in Desk (`QrScannerDialog.jsx`,
+   `useQrCamera.js`, `utils/checkInScan.js`, library `jsqr`). Manual entry is
+   unchanged. It uses the existing lookup and check-in API.
+2. **Backup:** `backend/backup.json` (git-ignored), made by
+   `manage.py create_backup`. `manage.py restore_backup` restores it once into a
+   new database and refuses a database that already has accounts.
+3. **Render preparation:** `render.yaml`, `backend/build.sh`, `backend/start.sh`,
+   `DATABASE_URL`, WhiteNoise, gunicorn, psycopg, media served in production.
+4. **Guide:** `docs/RENDER_DEPLOYMENT_GUIDE.md`.
+5. **Fix:** a reservation reminder can no longer be sent twice by two processes.
+
+### Verification (2026-11-18, revision 4)
+
+| Check | Result |
+|---|---|
+| Backend tests (SQLite) | 192 passed |
+| Scanner in a real browser, simulated camera (development and production builds) | 54 / 54 each |
+| Backup restored into a separate database, every row compared | Passed (2,467 records) |
+| Production settings rehearsal (hosts, CORS, static files, media, scheduler) | Passed |
+| `render.yaml` against Render's published schema | Valid |
+| Lint / build | Clean |
+
+**Not tested yet:** the deployment itself, a physical camera, gunicorn (it does
+not run on Windows), and the restore and test suite on a real PostgreSQL server.
+The backup data passed a static check of PostgreSQL's stricter rules.
+
+## Session of 2026-11-18: revision 3 (rooms, no-shows, tables)
+
+1. **Room reservation removed.** Pages, routes, menu items, dashboard shortcuts,
+   the `/api/study-rooms/` API and room booking in the service are gone. Past room
+   reservations (125) are kept and readable; all rooms are archived.
+2. **15-minute automatic no-show.** The deadline is exactly start + 15 minutes
+   (no longer configurable). `reservations/scheduler.py` runs every 30 seconds
+   inside the web server, with no browser needed.
+3. **Grouped tables.** Student map, Manage Seats map and the seat list show each
+   table's six seats together, Table 1 to 15.
+4. **Whole-table availability.** *Manage table* in Manage Seats; single-seat
+   availability still works on its own. New field `Seat.out_with_table`.
+
+Dashboards: the study room meter, stat and ranking were replaced by computers.
+
+Migrations: `library.0007`, `seats.0003`, `reservations.0005`, `users.0003`,
+`activity.0003`. Backup: `backend/db.backup-before-revision-3.sqlite3`.
+
+### Verification (2026-11-18)
+
+| Check | Result |
+|---|---|
+| Backend tests | 183 passed |
+| Live server, no browser or web requests: overdue reservations cancelled | Passed |
+| Revision 3 in a real browser | 65 / 65 |
+| Revision 1 workflows | 81 / 81 |
+| Revision 2 (branding, login, install, website, settings) | 59 / 59 |
+| Website at four widths | 32 / 32 |
+| Installed app (production build) | 14 / 14 |
+| Every portal page, all roles, four widths | No errors |
+| Lint / build | Clean |
+
+Requirement: the Django server must be running for no-shows to be processed.
 
 ## Session of 2026-11-17: revision 2 (branding, website, installation)
 
@@ -178,13 +240,13 @@ Manage Rooms, no extra floors, no Near window).
 ## Known limitations
 
 - Real-time is polling (5 to 15 seconds), not push.
-- QR codes are displayed, not camera-scanned; the desk accepts a typed code or
-  a handheld scanner.
+- The desk accepts a camera scan, a typed code or a handheld scanner. The camera
+  needs HTTPS (or localhost).
 - Notifications are in-app only (no email or SMS).
 - No password reset by email; an Admin resets a forgotten password.
 - Installing on a phone needs HTTPS; `localhost` works for desktop.
 
 ## Possible next steps (not started)
 
-- Commit the revision.
-- Decide whether the study room should stay reservable (see "Things to know").
+- Commit the revisions.
+- Deploy to Render by following `docs/RENDER_DEPLOYMENT_GUIDE.md`.

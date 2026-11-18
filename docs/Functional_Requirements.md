@@ -1,10 +1,10 @@
 # Functional Requirements of the Library Seat & Study Room Reservation Portal
 
 Stakeholder: the School Library  
-Date: November 17, 2026  
-Total functional requirements: 140
+Date: November 18, 2026  
+Total functional requirements: 139
 
-This document lists the functional requirements of the Library Seat & Study Room Reservation Portal of DLL Library (Dalubhasaan ng Lungsod ng Lucena), a web application that lets students request library seats, tables, computers and the study room, and lets the library staff review and manage those requests. It also includes a public website with the library's information. The requirements describe the system as it is implemented. They reflect the actual library: one floor (First Floor), a Reading Hall with 15 tables of 6 chairs (90 seats), a Computer Area with 4 computers, and one study room.
+This document lists the functional requirements of the Library Seat & Study Room Reservation Portal of DLL Library (Dalubhasaan ng Lungsod ng Lucena), a web application that lets students request library seats, whole tables and computers, and lets the library staff review and manage those requests. It also includes a public website with the library's information. The requirements describe the system as it is implemented. They reflect the actual library: one floor (First Floor), a Reading Hall with 15 tables of 6 chairs (90 seats) and a Computer Area with 4 computers.
 
 ## User Roles
 
@@ -13,7 +13,7 @@ This document lists the functional requirements of the Library Seat & Study Room
 | Admin | Manages accounts, library settings and seating, and has access to every function. |
 | Librarian | Approves or rejects reservation requests and runs daily library operations. |
 | Student Assistant | A student who helps the Librarian monitor seats and check students in. |
-| Student | Requests seats, tables, computers or the study room and manages own reservations. |
+| Student | Requests seats, tables or computers and manages own reservations. |
 
 ## 1. User Authentication and Account Management
 
@@ -62,170 +62,164 @@ This document lists the functional requirements of the Library Seat & Study Room
 | FR-031 | Seat Features | A seat can be marked as having a power outlet, having a computer, or being wheelchair accessible. |
 | FR-032 | Seating Zone Management | Authorized staff can add, edit and delete seating zones. |
 | FR-033 | Seat Maintenance Status | Authorized staff can mark a seat as under maintenance or out of service, with a note for students. |
-| FR-034 | Reservations Affected by Maintenance | When a seat is taken out of service, its upcoming reservations are cancelled and the students are notified. |
-| FR-035 | Preservation of History | Seats and zones that are no longer used are archived instead of deleted, so past reservations remain on record. |
+| FR-034 | Whole-Table Availability | Authorized staff can take all six seats of a table out of service, or restore them, in one action. |
+| FR-035 | Table Status Display | The system shows whether each table is fully available, partially available, reserved or out of service. |
+| FR-036 | Independent Seat Availability | A seat that was out of service on its own stays out of service when its table is restored. |
+| FR-037 | Reservations Affected by Maintenance | Before a seat or table is taken out of service, staff see the reservations affected and must confirm; those students are then notified. |
+| FR-038 | Preservation of History | Seats and zones that are no longer used are archived instead of deleted, so past reservations remain on record. |
 
 ## 4. Reservation Scheduling Rules
 
 | ID | Functional Requirement | Description |
 |---|---|---|
-| FR-036 | Date Selection | Students can choose a reservation date within the allowed number of days in advance. |
-| FR-037 | Time and Duration Selection | Students can choose a start time and a duration in 30-minute steps. |
-| FR-038 | Operating Hours Enforcement | The system only accepts reservations that fall within the library's opening hours. |
-| FR-039 | Closure Day Enforcement | The system does not accept reservations on days when the library is closed. |
-| FR-040 | Past Time Prevention | The system does not accept reservations for a date or time that has already passed. |
-| FR-041 | Duration Limits | The system enforces the minimum and maximum length of a reservation. |
-| FR-042 | Reservation Limits per Student | The system limits how many active reservations and how many reservations per day a student may have. |
-| FR-043 | One Place at a Time | A student cannot hold two reservations that overlap in time. |
-| FR-044 | Booking Suspension for Repeated No-Shows | A student who misses too many reservations within a set period cannot make new reservations. |
+| FR-039 | Date Selection | Students can choose a reservation date within the allowed number of days in advance. |
+| FR-040 | Time and Duration Selection | Students can choose a start time and a duration in 30-minute steps. |
+| FR-041 | Operating Hours Enforcement | The system only accepts reservations that fall within the library's opening hours. |
+| FR-042 | Closure Day Enforcement | The system does not accept reservations on days when the library is closed. |
+| FR-043 | Past Time Prevention | The system does not accept reservations for a date or time that has already passed. |
+| FR-044 | Duration Limits | The system enforces the minimum and maximum length of a reservation. |
+| FR-045 | Reservation Limits per Student | The system limits how many active reservations and how many reservations per day a student may have. |
+| FR-046 | One Place at a Time | A student cannot hold two reservations that overlap in time. |
+| FR-047 | Booking Suspension for Repeated No-Shows | A student who misses too many reservations within a set period cannot make new reservations. |
 
 ## 5. Seat, Table and Group Reservation
 
 | ID | Functional Requirement | Description |
 |---|---|---|
-| FR-045 | Individual Seat Reservation | Students can request one available seat for a chosen date and time. |
-| FR-046 | Two-Seat Reservation | Students can request up to two seats without giving a reason. |
-| FR-047 | Group Seat Reservation | Students can request three to six seats in one request. |
-| FR-048 | Whole-Table Reservation | Students can request an entire table of six seats with a single selection. |
-| FR-049 | Reason for Group Requests | The system requires a reason when a student requests more than two seats, including a whole table. |
-| FR-050 | Seat Limit per Request | One request can cover at most six seats, all in the same area. |
-| FR-051 | Review Before Submitting | The system shows the selected seats, date and time for the student to review before the request is sent. |
-| FR-052 | Availability Verification | The server checks that every requested seat is free before saving the request. |
-| FR-053 | Double-Booking Prevention | The system prevents two reservations from holding the same seat at the same time, even when they are submitted at the same moment. |
-| FR-054 | Pending Requests Hold Seats | Seats in a pending request are held so that other students cannot request them for the same time. |
+| FR-048 | Individual Seat Reservation | Students can request one available seat for a chosen date and time. |
+| FR-049 | Two-Seat Reservation | Students can request up to two seats without giving a reason. |
+| FR-050 | Group Seat Reservation | Students can request three to six seats in one request. |
+| FR-051 | Whole-Table Reservation | Students can request an entire table of six seats with a single selection. |
+| FR-052 | Reason for Group Requests | The system requires a reason when a student requests more than two seats, including a whole table. |
+| FR-053 | Seat Limit per Request | One request can cover at most six seats, all in the same area. |
+| FR-054 | Review Before Submitting | The system shows the selected seats, date and time for the student to review before the request is sent. |
+| FR-055 | Availability Verification | The server checks that every requested seat is free before saving the request. |
+| FR-056 | Double-Booking Prevention | The system prevents two reservations from holding the same seat at the same time, even when they are submitted at the same moment. |
+| FR-057 | Pending Requests Hold Seats | Seats in a pending request are held so that other students cannot request them for the same time. |
 
 ## 6. Computer Reservation
 
 | ID | Functional Requirement | Description |
 |---|---|---|
-| FR-055 | Computer Area | The system has a Computer Area with exactly four reservable computers, separate from the 90 seats. |
-| FR-056 | Computer Reservation | Students can request one available computer for a chosen date and time. |
-| FR-057 | One Computer per Request | The system does not allow more than one computer in a single reservation. |
-| FR-058 | One Student per Computer | A computer can be held by only one student during a given time. |
-| FR-059 | No Overlapping Computer Use | A student cannot hold two computers for overlapping times. |
-| FR-060 | Approval of Computer Requests | Computer reservations follow the same Librarian approval process as seat reservations. |
+| FR-058 | Computer Area | The system has a Computer Area with exactly four reservable computers, separate from the 90 seats. |
+| FR-059 | Computer Reservation | Students can request one available computer for a chosen date and time. |
+| FR-060 | One Computer per Request | The system does not allow more than one computer in a single reservation. |
+| FR-061 | One Student per Computer | A computer can be held by only one student during a given time. |
+| FR-062 | No Overlapping Computer Use | A student cannot hold two computers for overlapping times. |
+| FR-063 | Approval of Computer Requests | Computer reservations follow the same Librarian approval process as seat reservations. |
 
-## 7. Study Room Reservation
-
-| ID | Functional Requirement | Description |
-|---|---|---|
-| FR-061 | Study Room Availability | Users can see whether the library's study room is available for a chosen date and time. |
-| FR-062 | Study Room Details and Schedule | Users can view the room's capacity, facilities and its schedule for the chosen day. |
-| FR-063 | Study Room Request | Students can request the study room by giving the number of people and the purpose. |
-| FR-064 | Group Size Rule | The system checks that the number of people fits the room's minimum group size and capacity. |
-| FR-065 | Inviting Classmates | Students can add classmates to a room request by entering their student IDs. |
-
-## 8. Reservation Approval and Management
+## 7. Reservation Approval and Management
 
 | ID | Functional Requirement | Description |
 |---|---|---|
-| FR-066 | Pending Status on Submission | Every reservation request submitted by a student is saved with the status Pending. |
-| FR-067 | No Automatic Confirmation | A student's request is never shown as Confirmed until a Librarian approves it. |
-| FR-068 | Request Review | The Librarian can view the student's name and ID, the date and time, the seats requested, the number of seats, the reason, the submission date and the status. |
-| FR-069 | Reservation Approval | The Librarian can approve a pending request, which changes its status to Confirmed. |
-| FR-070 | Reservation Rejection | The Librarian can reject a pending request, with an optional reason, which changes its status to Rejected. |
-| FR-071 | Approval Authority | Only a Librarian or the Admin can approve or reject reservation requests. |
-| FR-072 | Release of Rejected Requests | When a request is rejected, its seats become available to other students again. |
-| FR-073 | Expiry of Unreviewed Requests | A request that is not reviewed before its reserved time is cancelled automatically and its seats are released. |
-| FR-074 | Withdrawing a Request | A student can withdraw their own pending request at any time. |
-| FR-075 | Cancellation by Student | A student can cancel their own confirmed reservation before it starts. |
-| FR-076 | Cancellation by Staff | A Librarian or the Admin can cancel a reservation and give the student a reason. |
-| FR-077 | Reservation on Behalf of a Student | A Librarian or the Admin can make a reservation for a student, which is confirmed immediately. |
-| FR-078 | Reservation Status Tracking | Each reservation has a status: Pending, Confirmed, Checked in, Completed, Cancelled, Rejected or No-show. |
-| FR-079 | My Reservations | Students can view their upcoming reservations and their reservation history. |
-| FR-080 | Reservation Details | Users can open a reservation to see its details, its status and the history of what happened to it. |
-| FR-081 | Reservation List for Staff | Library staff can view all reservations and search or filter them by student, code, date, status and type. |
-| FR-082 | Reservation Code | Every reservation receives a unique reference code. |
+| FR-064 | Pending Status on Submission | Every reservation request submitted by a student is saved with the status Pending. |
+| FR-065 | No Automatic Confirmation | A student's request is never shown as Confirmed until a Librarian approves it. |
+| FR-066 | Request Review | The Librarian can view the student's name and ID, the date and time, the seats requested, the number of seats, the reason, the submission date and the status. |
+| FR-067 | Reservation Approval | The Librarian can approve a pending request, which changes its status to Confirmed. |
+| FR-068 | Reservation Rejection | The Librarian can reject a pending request, with an optional reason, which changes its status to Rejected. |
+| FR-069 | Approval Authority | Only a Librarian or the Admin can approve or reject reservation requests. |
+| FR-070 | Release of Rejected Requests | When a request is rejected, its seats become available to other students again. |
+| FR-071 | Expiry of Unreviewed Requests | A request that is not reviewed before its reserved time is cancelled automatically and its seats are released. |
+| FR-072 | Withdrawing a Request | A student can withdraw their own pending request at any time. |
+| FR-073 | Cancellation by Student | A student can cancel their own confirmed reservation before it starts. |
+| FR-074 | Cancellation by Staff | A Librarian or the Admin can cancel a reservation and give the student a reason. |
+| FR-075 | Reservation on Behalf of a Student | A Librarian or the Admin can make a reservation for a student, which is confirmed immediately. |
+| FR-076 | Reservation Status Tracking | Each reservation has a status: Pending, Confirmed, Checked in, Completed, Cancelled, Rejected or No-show. |
+| FR-077 | My Reservations | Students can view their upcoming reservations and their reservation history. |
+| FR-078 | Reservation Details | Users can open a reservation to see its details, its status and the history of what happened to it. |
+| FR-079 | Reservation List for Staff | Library staff can view all reservations and search or filter them by student, code, date, status and type. |
+| FR-080 | Reservation Code | Every reservation receives a unique reference code. |
 
-## 9. Notifications
-
-| ID | Functional Requirement | Description |
-|---|---|---|
-| FR-083 | New Request Notification to Librarians | The system notifies every Librarian when a student submits a reservation request. |
-| FR-084 | New Request Notification to Admin | The system also notifies the Admin when a student submits a reservation request. |
-| FR-085 | Request Received Notification | The student is notified that their request was sent and is waiting for approval. |
-| FR-086 | Approval Notification | The student is notified when their request is approved. |
-| FR-087 | Rejection Notification | The student is notified when their request is rejected, together with the reason given. |
-| FR-088 | Cancellation and Expiry Notifications | The student is notified when their reservation is cancelled or their request expires. |
-| FR-089 | Reminder Notification | The student is reminded shortly before a confirmed reservation starts. |
-| FR-090 | Check-in and No-Show Notifications | The student is notified when they are checked in and when a reservation is marked as a no-show. |
-| FR-091 | Invitation Notification | A classmate added to a study room reservation is notified. |
-| FR-092 | Unread Notification Count | The system shows the number of unread notifications on the notification bell and in the menu. |
-| FR-093 | Notification List | Users can view their notifications, mark them as read and delete them. |
-| FR-094 | Link to Reservation | Selecting a notification opens the reservation it refers to. |
-| FR-095 | Stored Notifications | Notifications are saved in the database and remain available after the page is refreshed. |
-
-## 10. Check-in and Library Operations
+## 8. Notifications
 
 | ID | Functional Requirement | Description |
 |---|---|---|
-| FR-096 | Student Self Check-in | A student can check in to their confirmed reservation during the check-in period. |
-| FR-097 | Check-in Period | Check-in opens shortly before the start time and closes after a grace period. |
-| FR-098 | Check-in Code | A confirmed reservation shows its code as text and as a QR code for the student to present. |
-| FR-099 | Check-in Desk | Library staff can find a reservation by entering its code and confirm the student's arrival. |
-| FR-100 | Check-in by Staff | A Librarian, a Student Assistant or the Admin can check a student in. |
-| FR-101 | Check-out | A student or a staff member can check out, which ends the reservation and frees the seat. |
-| FR-102 | Automatic Completion | A checked-in reservation is completed automatically when its end time is reached. |
-| FR-103 | Automatic No-Show | A confirmed reservation that is not checked in during the check-in period is marked as a no-show and its seat is released. |
-| FR-104 | Manual No-Show | A Librarian or the Admin can mark a reservation as a no-show after it has started. |
-| FR-105 | Live Occupancy Monitoring | Library staff can see how many seats and computers are occupied, reserved, available and unavailable. |
-| FR-106 | Occupant Information for Staff | Library staff can see which student has requested or is using a seat. |
+| FR-081 | New Request Notification to Librarians | The system notifies every Librarian when a student submits a reservation request. |
+| FR-082 | New Request Notification to Admin | The system also notifies the Admin when a student submits a reservation request. |
+| FR-083 | Request Received Notification | The student is notified that their request was sent and is waiting for approval. |
+| FR-084 | Approval Notification | The student is notified when their request is approved. |
+| FR-085 | Rejection Notification | The student is notified when their request is rejected, together with the reason given. |
+| FR-086 | Cancellation and Expiry Notifications | The student is notified when their reservation is cancelled or their request expires. |
+| FR-087 | Reminder Notification | The student is reminded shortly before a confirmed reservation starts. |
+| FR-088 | Check-in and No-Show Notifications | The student is notified when they are checked in and when a reservation is marked as a no-show. |
+| FR-089 | Unread Notification Count | The system shows the number of unread notifications on the notification bell and in the menu. |
+| FR-090 | Notification List | Users can view their notifications, mark them as read and delete them. |
+| FR-091 | Link to Reservation | Selecting a notification opens the reservation it refers to. |
+| FR-092 | Stored Notifications | Notifications are saved in the database and remain available after the page is refreshed. |
 
-## 11. Dashboards and Reports
-
-| ID | Functional Requirement | Description |
-|---|---|---|
-| FR-107 | Student Dashboard | Students see their current and upcoming reservations, their statistics, current availability and their booking standing. |
-| FR-108 | Operations Dashboard | Librarians and Student Assistants see pending requests, today's reservations, students checked in and those awaiting check-in. |
-| FR-109 | Pending Request Count | The operations dashboard shows how many requests are waiting for approval. |
-| FR-110 | Admin Dashboard | The Admin sees totals of accounts, seats and reservations, current occupancy, trends and recent activity. |
-| FR-111 | Usage Reports | Librarians and the Admin can view reservation totals, daily trends, busiest times, most-used seats and outcomes for a chosen period. |
-| FR-112 | Report Table View | Each chart in the reports can also be shown as a table of numbers. |
-| FR-113 | Activity Log | The Admin can view a record of logins, reservation actions and changes to accounts, seats and settings. |
-| FR-114 | Activity Log Filtering | The Admin can search the activity log and filter it by area and date. |
-
-## 12. Library Settings
+## 9. Check-in and Library Operations
 
 | ID | Functional Requirement | Description |
 |---|---|---|
-| FR-115 | Operating Hours Management | The Admin can set the opening and closing time for each day of the week. |
-| FR-116 | Closure Day Management | The Admin can add and remove days on which the library is closed. |
-| FR-117 | Reservation Rule Configuration | The Admin can set booking limits, durations, the advance-booking period, check-in times and the no-show limit. |
-| FR-118 | Self Check-in Setting | The Admin can turn student self check-in on or off. |
-| FR-119 | Reservations Affected by Schedule Changes | When hours change or a closure is added, reservations that no longer fit are cancelled and the students are notified. |
+| FR-093 | Student Self Check-in | A student can check in to their confirmed reservation during the check-in period. |
+| FR-094 | Check-in Period | Check-in opens shortly before the start time and closes exactly 15 minutes after the start time. |
+| FR-095 | Check-in Code | A confirmed reservation shows its code as text and as a QR code for the student to present. |
+| FR-096 | Check-in Desk | Library staff can find a reservation by entering its code and confirm the student's arrival. |
+| FR-097 | Check-in by Staff | A Librarian, a Student Assistant or the Admin can check a student in. |
+| FR-098 | Check-out | A student or a staff member can check out, which ends the reservation and frees the seat. |
+| FR-099 | Automatic Completion | A checked-in reservation is completed automatically when its end time is reached. |
+| FR-100 | Automatic No-Show Cancellation | The server automatically cancels a confirmed reservation as a no-show when nobody checks in within 15 minutes of the start time. |
+| FR-101 | Release After No-Show | All seats or the computer of a no-show reservation become available to other students for the remaining time. |
+| FR-102 | No-Show Notification | The student is notified that the reservation was automatically cancelled and why. |
+| FR-103 | Manual No-Show | A Librarian or the Admin can mark a reservation as a no-show after it has started. |
+| FR-104 | Live Occupancy Monitoring | Library staff can see how many seats and computers are occupied, reserved, available and unavailable. |
+| FR-105 | Occupant Information for Staff | Library staff can see which student has requested or is using a seat. |
 
-## 13. Profile Management
-
-| ID | Functional Requirement | Description |
-|---|---|---|
-| FR-120 | View Profile | Users can view their own account details and role. |
-| FR-121 | Update Profile | Users can update their name, mobile number, program and year level. |
-| FR-122 | Change Password | Users can change their password by entering their current password and a new one. |
-
-## 14. Public Website (Landing Page)
-
-| ID | Functional Requirement | Description |
-|---|---|---|
-| FR-123 | Public Landing Page | Visitors can open the DLL Library website without logging in. |
-| FR-124 | Landing Page Navigation | The website header has Home, Our Services, About and Contact links, an Install button and a Login button. |
-| FR-125 | Library Information Display | The website shows the library name, tagline, introduction, services, library card requirements, rules and personnel. |
-| FR-126 | Library Hours Display | The website shows the library hours from the same opening hours setting used for reservations. |
-| FR-127 | Contact Information Display | The website shows the library's address, telephone, email and Facebook page. |
-| FR-128 | Back to Website from Login | The login page has a Back button that returns to the website when it is opened in a browser. |
-| FR-129 | Library Information Management | The Admin can edit the library name, tagline, introduction and contact information in Library Settings. |
-| FR-130 | Landing Page Content Management | The Admin can add, edit, reorder and remove library services, library card steps, rules, personnel and library photos. |
-| FR-131 | Personnel and Library Photos | The Admin can upload a photo for each library staff member and photos of the library for the website. |
-| FR-132 | Read-Only Public Content | Visitors and non-admin users can read the website content but cannot change it. |
-
-## 15. Other System Functions
+## 10. Dashboards and Reports
 
 | ID | Functional Requirement | Description |
 |---|---|---|
-| FR-133 | Automatic Data Refresh | Seat availability, dashboards and notifications refresh automatically every few seconds. |
-| FR-134 | Form Draft Preservation | Information entered in a form is kept when the page is refreshed and cleared after submission or logout. |
-| FR-135 | Responsive Layout | The system adapts to desktop, laptop, tablet and mobile screens, with a menu button on smaller screens. |
-| FR-136 | Installable Application | Users can install the system on a phone or computer from the Install button on the landing page or in the sidebar; instructions are shown when the browser does not offer installation. |
-| FR-137 | Installed App Start | The installed app opens directly on the login page, or on the user's dashboard when already logged in, without showing the public website. |
-| FR-138 | Installed App Session | Users of the installed app stay logged in after closing and reopening it, until they log out or the session expires. |
-| FR-139 | Offline Notice | When there is no connection, the system says so and does not allow reservation actions until the connection returns. |
-| FR-140 | Action Confirmation | The system asks for confirmation before actions such as cancelling, rejecting or deactivating. |
+| FR-106 | Student Dashboard | Students see their current and upcoming reservations, their statistics, current availability and their booking standing. |
+| FR-107 | Operations Dashboard | Librarians and Student Assistants see pending requests, today's reservations, students checked in and those awaiting check-in. |
+| FR-108 | Pending Request Count | The operations dashboard shows how many requests are waiting for approval. |
+| FR-109 | Admin Dashboard | The Admin sees totals of accounts, seats and reservations, current occupancy, trends and recent activity. |
+| FR-110 | Usage Reports | Librarians and the Admin can view reservation totals, daily trends, busiest times, most-used seats and outcomes for a chosen period. |
+| FR-111 | Report Table View | Each chart in the reports can also be shown as a table of numbers. |
+| FR-112 | Activity Log | The Admin can view a record of logins, reservation actions and changes to accounts, seats and settings. |
+| FR-113 | Activity Log Filtering | The Admin can search the activity log and filter it by area and date. |
+
+## 11. Library Settings
+
+| ID | Functional Requirement | Description |
+|---|---|---|
+| FR-114 | Operating Hours Management | The Admin can set the opening and closing time for each day of the week. |
+| FR-115 | Closure Day Management | The Admin can add and remove days on which the library is closed. |
+| FR-116 | Reservation Rule Configuration | The Admin can set booking limits, durations, the advance-booking period, check-in times and the no-show limit. |
+| FR-117 | Self Check-in Setting | The Admin can turn student self check-in on or off. |
+| FR-118 | Reservations Affected by Schedule Changes | When hours change or a closure is added, reservations that no longer fit are cancelled and the students are notified. |
+
+## 12. Profile Management
+
+| ID | Functional Requirement | Description |
+|---|---|---|
+| FR-119 | View Profile | Users can view their own account details and role. |
+| FR-120 | Update Profile | Users can update their name, mobile number, program and year level. |
+| FR-121 | Change Password | Users can change their password by entering their current password and a new one. |
+
+## 13. Public Website (Landing Page)
+
+| ID | Functional Requirement | Description |
+|---|---|---|
+| FR-122 | Public Landing Page | Visitors can open the DLL Library website without logging in. |
+| FR-123 | Landing Page Navigation | The website header has Home, Our Services, About and Contact links, an Install button and a Login button. |
+| FR-124 | Library Information Display | The website shows the library name, tagline, introduction, services, library card requirements, rules and personnel. |
+| FR-125 | Library Hours Display | The website shows the library hours from the same opening hours setting used for reservations. |
+| FR-126 | Contact Information Display | The website shows the library's address, telephone, email and Facebook page. |
+| FR-127 | Back to Website from Login | The login page has a Back button that returns to the website when it is opened in a browser. |
+| FR-128 | Library Information Management | The Admin can edit the library name, tagline, introduction and contact information in Library Settings. |
+| FR-129 | Landing Page Content Management | The Admin can add, edit, reorder and remove library services, library card steps, rules, personnel and library photos. |
+| FR-130 | Personnel and Library Photos | The Admin can upload a photo for each library staff member and photos of the library for the website. |
+| FR-131 | Read-Only Public Content | Visitors and non-admin users can read the website content but cannot change it. |
+
+## 14. Other System Functions
+
+| ID | Functional Requirement | Description |
+|---|---|---|
+| FR-132 | Automatic Data Refresh | Seat availability, dashboards and notifications refresh automatically every few seconds. |
+| FR-133 | Form Draft Preservation | Information entered in a form is kept when the page is refreshed and cleared after submission or logout. |
+| FR-134 | Responsive Layout | The system adapts to desktop, laptop, tablet and mobile screens, with a menu button on smaller screens. |
+| FR-135 | Installable Application | Users can install the system on a phone or computer from the Install button on the landing page or in the sidebar; instructions are shown when the browser does not offer installation. |
+| FR-136 | Installed App Start | The installed app opens directly on the login page, or on the user's dashboard when already logged in, without showing the public website. |
+| FR-137 | Installed App Session | Users of the installed app stay logged in after closing and reopening it, until they log out or the session expires. |
+| FR-138 | Offline Notice | When there is no connection, the system says so and does not allow reservation actions until the connection returns. |
+| FR-139 | Action Confirmation | The system asks for confirmation before actions such as cancelling, rejecting or deactivating. |

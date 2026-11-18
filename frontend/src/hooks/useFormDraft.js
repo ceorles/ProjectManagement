@@ -5,7 +5,7 @@ import { useAuth } from './useAuth'
 /**
  * Form state that survives a page refresh.
  *
- *   const { values, setField, clearDraft, restored } = useFormDraft('room-booking', initial)
+ *   const { values, setField, clearDraft, restored } = useFormDraft('seat-booking', initial)
  *
  * Whatever the user enters is saved as they type and restored when they come
  * back to the form. Call `clearDraft()` after a successful submit or when
