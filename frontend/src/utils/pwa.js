@@ -1,15 +1,5 @@
-/**
- * Installing the app (PWA), in one place for the whole application.
- *
- * Browsers that support installation fire `beforeinstallprompt` once, early,
- * often before any React component has mounted. This module is imported by
- * main.jsx, so it is listening from the very first moment and keeps the event
- * until someone presses "Install app" - in the sidebar or on the landing page.
- */
-
 const INSTALLED_MODES = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay']
 
-/** True when DLL Library is running as an installed app, not in a browser tab. */
 export function isStandalone() {
   if (typeof window === 'undefined') return false
   if (window.navigator.standalone === true) return true // iOS home-screen app
@@ -26,7 +16,7 @@ function notify() {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault() // keep it for our own button instead of the browser's mini-bar
+    event.preventDefault()
     promptEvent = event
     notify()
   })
@@ -46,21 +36,16 @@ export function getInstallState() {
   return { canPrompt: Boolean(promptEvent), installed }
 }
 
-/**
- * Show the browser's own install dialog. Resolves to 'accepted',
- * 'dismissed' or 'unavailable' (the browser has not offered installation).
- */
 export async function promptInstall() {
   if (!promptEvent) return 'unavailable'
   const event = promptEvent
   event.prompt()
   const { outcome } = await event.userChoice
-  promptEvent = null // a prompt can only be used once
+  promptEvent = null
   notify()
   return outcome
 }
 
-/** Which manual steps to suggest when the browser has not offered installation. */
 export function installPlatform() {
   const agent = window.navigator.userAgent
   const ios = /iPad|iPhone|iPod/.test(agent)

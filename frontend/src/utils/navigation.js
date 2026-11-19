@@ -3,10 +3,6 @@ import {
   ScanLine, ScrollText, Settings, SlidersHorizontal, User, Users,
 } from 'lucide-react'
 
-/**
- * Sidebar sections for a user. Hiding a link here is only for convenience:
- * the routes are guarded separately and the backend checks every request.
- */
 export function navigationFor(user) {
   const account = {
     title: 'Account',
