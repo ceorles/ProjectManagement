@@ -27,3 +27,4 @@ frontend/.env.local
 .idea/
 .DS_Store
 Thumbs.db
+DLL Library Backups/backup.json
