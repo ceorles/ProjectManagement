@@ -3,11 +3,15 @@ import { UserPlus } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import Button from '../../components/common/Button'
 import {
-  FormError, PasswordField, SelectField, TextField,
+  FormError, PasswordField, TextField,
 } from '../../components/common/FormControls'
+import {
+  MobileNumberField, NameField, ProgramField, StudentIdField, YearLevelField,
+} from '../../components/common/StudentFields'
 import { useAuth } from '../../hooks/useAuth'
 import { useFormDraft } from '../../hooks/useFormDraft'
 import { fieldError } from '../../utils/errors'
+import { formatName, mobileProblem, studentIdProblem } from '../../utils/studentInfo'
 import AuthLayout from './AuthLayout'
 
 const EMPTY = {
@@ -24,23 +28,36 @@ export default function RegisterPage() {
   const [passwords, setPasswords] = useState({ password: '', confirm_password: '' })
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  // Problems found before sending, shown under their fields.
+  const [problems, setProblems] = useState({})
 
   const bind = (name) => ({
     name,
     value: values[name],
-    error: fieldError(error, name),
-    onChange: (event) => setField(name, event.target.value),
+    error: problems[name] || fieldError(error, name),
+    onChange: (event) => {
+      setProblems((current) => ({ ...current, [name]: undefined }))
+      setField(name, event.target.value)
+    },
   })
   const mismatch = passwords.confirm_password && passwords.password !== passwords.confirm_password
 
   const submit = async (event) => {
     event.preventDefault()
     if (submitting || mismatch) return
+    const found = { student_id: studentIdProblem(values.student_id), phone: mobileProblem(values.phone) }
+    if (found.student_id || found.phone) {
+      setProblems(found)
+      setError('Please check the highlighted fields.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
       await register({
         ...values,
+        first_name: formatName(values.first_name),
+        last_name: formatName(values.last_name),
         ...passwords,
         year_level: values.year_level ? Number(values.year_level) : null,
       })
@@ -67,20 +84,14 @@ export default function RegisterPage() {
         )}
         <FormError error={error?.fields ? 'Please check the highlighted fields.' : error} />
         <div className="form-grid">
-          <TextField label="First name" autoComplete="given-name" required {...bind('first_name')} />
-          <TextField label="Last name" autoComplete="family-name" required {...bind('last_name')} />
+          <NameField label="First name" autoComplete="given-name" required {...bind('first_name')} />
+          <NameField label="Last name" autoComplete="family-name" required {...bind('last_name')} />
           <TextField label="Email address" type="email" autoComplete="email" required
             className="span-2" placeholder="you@university.edu" {...bind('email')} />
-          <TextField label="Student ID" required placeholder="e.g. 2024-00123"
-            hint="As printed on your school ID." {...bind('student_id')} />
-          <SelectField label="Year level" {...bind('year_level')}>
-            <option value="">Select...</option>
-            {[1, 2, 3, 4, 5, 6].map((year) => <option key={year} value={year}>Year {year}</option>)}
-          </SelectField>
-          <TextField label="Program / course"
-            placeholder="e.g. BS Information Technology" {...bind('program')} />
-          <TextField label="Mobile number" type="tel" autoComplete="tel"
-            placeholder="Optional" {...bind('phone')} />
+          <StudentIdField label="Student ID" required {...bind('student_id')} />
+          <YearLevelField {...bind('year_level')} />
+          <ProgramField className="span-2" {...bind('program')} />
+          <MobileNumberField label="Mobile number" hint="Optional." {...bind('phone')} />
           <PasswordField
             label="Password" name="password" autoComplete="new-password" required
             hint="At least 8 characters, not only numbers."

@@ -34,8 +34,8 @@ export function navigationFor(user) {
         { to: '/desk', label: 'Check-in Desk', icon: ScanLine },
         { to: '/manage/reservations', label: 'Reservations', icon: ClipboardList },
         { to: '/seats', label: 'Seat Map', icon: Armchair },
-        // Reports are for librarians and admins, not student assistants.
-        ...(user.role === 'assistant' ? [] : [{ to: '/reports', label: 'Reports', icon: ChartColumn }]),
+        // Reports are for the Admin only.
+        ...(user.role === 'admin' ? [{ to: '/reports', label: 'Reports', icon: ChartColumn }] : []),
       ],
     },
   ]

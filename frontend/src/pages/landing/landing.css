@@ -396,7 +396,5 @@ html:has(.landing) { scroll-behavior: smooth; }
 /* Footer */
 
 .landing-footer { padding: 22px 0; background: var(--blue-950); color: var(--blue-200); font-size: var(--text-sm); }
-.landing-footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; }
+.landing-footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 24px; text-align: center; }
 .landing-footer strong { color: #fff; }
-.landing-footer__links { display: flex; gap: 18px; }
-.landing-footer a { color: var(--yellow-400); }

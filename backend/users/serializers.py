@@ -1,8 +1,11 @@
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Value
+from django.db.models.functions import Replace, Upper
 from rest_framework import serializers
 
 from .models import User
+from .student_info import StudentInfoValidationMixin
 
 
 def _validate_password(password, user=None):
@@ -27,7 +30,11 @@ def _unique_student_id(value, instance=None):
     student_id = (value or '').strip()
     if not student_id:
         return None
-    queryset = User.objects.filter(student_id__iexact=student_id)
+    # Compared without case or hyphen, so 023a12345 matches 023A-12345.
+    compact = student_id.replace('-', '').upper()
+    queryset = User.objects.annotate(
+        compact_id=Upper(Replace('student_id', Value('-'), Value(''))),
+    ).filter(compact_id=compact)
     if instance is not None:
         queryset = queryset.exclude(pk=instance.pk)
     if queryset.exists():
@@ -53,8 +60,11 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+class RegisterSerializer(StudentInfoValidationMixin, serializers.ModelSerializer):
     """Public self-registration. Always creates a Student, whatever is sent."""
+
+    # Checked in StudentInfoValidationMixin, so an older value can be kept as it is.
+    year_level = serializers.IntegerField(required=False, allow_null=True)
 
     password = serializers.CharField(write_only=True, trim_whitespace=False)
     confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
@@ -71,17 +81,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         return _unique_email(value)
 
     def validate_student_id(self, value):
-        for validator in User._meta.get_field('student_id').validators:
-            try:
-                validator(value.strip())
-            except DjangoValidationError as exc:
-                raise serializers.ValidationError(list(exc.messages)) from exc
-        return _unique_student_id(value)
-
-    def validate_year_level(self, value):
-        if value is not None and not 1 <= value <= 8:
-            raise serializers.ValidationError('Year level must be between 1 and 8.')
-        return value
+        student_id = self.clean_student_id(value)
+        if not student_id:
+            raise serializers.ValidationError('Enter your student ID.')
+        return _unique_student_id(student_id)
 
     def validate(self, attrs):
         if attrs['password'] != attrs.pop('confirm_password'):
@@ -107,17 +110,15 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(trim_whitespace=False)
 
 
-class ProfileUpdateSerializer(serializers.ModelSerializer):
+class ProfileUpdateSerializer(StudentInfoValidationMixin, serializers.ModelSerializer):
     """What a user may change about their own account."""
+
+    # Checked in StudentInfoValidationMixin, so an older value can be kept as it is.
+    year_level = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'phone', 'program', 'year_level']
-
-    def validate_year_level(self, value):
-        if value is not None and not 1 <= value <= 8:
-            raise serializers.ValidationError('Year level must be between 1 and 8.')
-        return value
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -140,8 +141,11 @@ class ChangePasswordSerializer(serializers.Serializer):
         return attrs
 
 
-class ManagedUserSerializer(serializers.ModelSerializer):
+class ManagedUserSerializer(StudentInfoValidationMixin, serializers.ModelSerializer):
     """Accounts as seen and edited by an Admin."""
+
+    # Checked in StudentInfoValidationMixin, so an older value can be kept as it is.
+    year_level = serializers.IntegerField(required=False, allow_null=True)
 
     full_name = serializers.CharField(read_only=True)
     password = serializers.CharField(write_only=True, required=False, trim_whitespace=False)
@@ -159,7 +163,7 @@ class ManagedUserSerializer(serializers.ModelSerializer):
         return _unique_email(value, self.instance)
 
     def validate_student_id(self, value):
-        return _unique_student_id(value, self.instance)
+        return _unique_student_id(self.clean_student_id(value), self.instance)
 
     def validate(self, attrs):
         instance = self.instance

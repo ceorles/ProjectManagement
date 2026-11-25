@@ -125,7 +125,8 @@ class AdminDashboardView(APIView):
 class ReportView(APIView):
     """Usage report for a period. Available to librarians and admins."""
 
-    permission_classes = [IsReservationManager]
+    # Reports and analytics are for the Admin only.
+    permission_classes = [IsAdmin]
     ALLOWED_DAYS = (7, 14, 30, 90)
 
     def get(self, request):

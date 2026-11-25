@@ -7,7 +7,7 @@ export const canManageResources = (user) => Boolean(user.can_manage_resources)
 const ROUTE_RULES = [
   [/^\/admin(\/|$)/, isAdmin],
   [/^\/manage\/seats(\/|$)/, canManageResources],
-  [/^\/reports(\/|$)/, canManageReservations],
+  [/^\/reports(\/|$)/, isAdmin],
   [/^\/(desk|manage\/reservations)(\/|$)/, isStaff],
   [/^\/reservations\/?$/, isStudent],
 ]

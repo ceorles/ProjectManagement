@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import RegexValidator
 from django.db import models
 
+from .student_info import YEAR_LEVELS
+
 student_id_validator = RegexValidator(
     regex=r'^[A-Za-z0-9-]{4,20}$',
     message='Student ID must be 4-20 letters, digits or dashes.',
@@ -56,7 +58,7 @@ class User(AbstractUser):
         max_length=20, unique=True, null=True, blank=True, validators=[student_id_validator]
     )
     program = models.CharField(max_length=120, blank=True)
-    year_level = models.PositiveSmallIntegerField(null=True, blank=True)
+    year_level = models.PositiveSmallIntegerField(null=True, blank=True, choices=YEAR_LEVELS)
 
     phone = models.CharField(max_length=30, blank=True)
 

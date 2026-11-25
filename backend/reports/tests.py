@@ -8,7 +8,7 @@ class DashboardTests(PortalTestCase):
             '/api/reports/student-dashboard/': {self.student},
             '/api/reports/staff-dashboard/': {self.librarian, self.admin},
             '/api/reports/admin-dashboard/': {self.admin},
-            '/api/reports/usage/': {self.librarian, self.admin},
+            '/api/reports/usage/': {self.admin},
         }
         for url, users in allowed.items():
             for user in (self.student, self.librarian, self.admin):

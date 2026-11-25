@@ -11,7 +11,7 @@ class RegistrationTests(PortalTestCase):
     def payload(self, **overrides):
         data = {
             'email': 'New.Student@Test.edu', 'first_name': 'Nia', 'last_name': 'New',
-            'student_id': '2025-0100', 'password': PASSWORD, 'confirm_password': PASSWORD,
+            'student_id': '023A-00100', 'password': PASSWORD, 'confirm_password': PASSWORD,
         }
         data.update(overrides)
         return data
@@ -115,10 +115,10 @@ class SessionTests(PortalTestCase):
 
     def test_profile_update_and_password_change(self):
         self.login_as(self.student)
-        response = self.client.patch('/api/auth/me/', {'phone': '0917 000 0000', 'role': 'admin'})
+        response = self.client.patch('/api/auth/me/', {'phone': '09170000000', 'role': 'admin'})
         self.assertEqual(response.status_code, 200)
         self.student.refresh_from_db()
-        self.assertEqual(self.student.phone, '0917 000 0000')
+        self.assertEqual(self.student.phone, '09170000000')
         self.assertEqual(self.student.role, User.Role.STUDENT)  # role is not editable
 
         wrong = self.client.post('/api/auth/change-password/', {

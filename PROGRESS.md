@@ -4,21 +4,56 @@ Library Seat & Study Room Reservation Portal. This file records what is built,
 what has been verified, and what is left. Updated at the end of each work
 session.
 
-**Last updated:** 2026-11-18
+**Last updated:** 2026-11-23
 
 ## Status at a glance
 
 | Area | State |
 |---|---|
-| Backend (Django REST API) | Complete. 192 automated tests pass. |
+| Backend (Django REST API) | Complete. 215 automated tests pass. |
 | Frontend (React + Vite) | Complete. Builds, and lints with no warnings. |
 | Library revision (real stakeholder data) | Complete and tested (details below). |
 | PWA (manifest, service worker, icons) | Complete (unchanged by the revision). |
 | Public website (landing page) | Complete and tested (revision 2, below). |
 | Documentation | `README.md`, `frontend/README.md`, `docs/Functional_Requirements.pdf` and `.md` (see `docs/`). |
 
-Revisions 3 and 4 are in the working tree and **not committed yet** (revision 2
-is in the last commit, so the changes can be reviewed with `git diff`).
+The system is **deployed** (Render Static Site + Render Web Service + Supabase
+PostgreSQL). Revision 5 is in the working tree and **not committed yet**; pushing
+it makes Render apply migrations `users.0004` and `users.0005` to Supabase.
+
+## Session of 2026-11-23: revision 5 (student details, filters, footer)
+
+1. **Student ID** `023A-12345`: hyphen inserted automatically, checked by the
+   server (prefixes 019A-023A in `users/student_info.py`), unique in any spelling.
+   Old IDs are kept until replaced: `manage.py update_student_ids` (CSV template).
+2. **Year level** 1st-4th Year only (model choices, migration `users.0004`, no SQL).
+3. **Mobile number** 11 digits starting with 09, checked by the server.
+4. **Names** capitalized (KYLA MAE -> Kyla Mae), in the forms and on the server.
+5. **Program** dropdown of the nine full official names. Migration `users.0005`
+   maps BSIT / BS Accountancy / BS Information Technology to full names.
+6. Same rules for Student Assistants created by the Admin (shared
+   `components/common/StudentFields.jsx` and `StudentInfoValidationMixin`).
+7. **Landing footer:** centered "DLL Library · Dalubhasaan ng Lungsod ng Lucena".
+8. **Reports:** Admin only (sidebar, route, `/api/reports/usage/`).
+9. **Users page:** sign-in activity filter and sort (recently signed in,
+   recently added, name A-Z / Z-A), reset button; server-side.
+
+Live data found (Supabase, 2026-11-23, read-only): 33 accounts; 27 of 28 student
+IDs in the old format (no mapping to new IDs exists in the data); no Year 5/6;
+all 4 phone numbers valid; no all-capital names; 17 program values that are not
+DLL programs (BS Psychology 4, BS Computer Science 4, BS Civil Engineering 3,
+BS Nursing 3, BA Communication 3) are left unchanged.
+
+Backup before this revision: `backend/backup-supabase-before-revision-5.json`.
+
+| Check | Result |
+|---|---|
+| Backend tests (SQLite) | 215 passed |
+| Migrations on a copy of the live data, forward and back | Passed, only program names changed |
+| `sqlmigrate users 0004` on Supabase | No-op (no SQL) |
+| Revision 5 in a real browser (isolated copy) | 69 / 69 |
+| Every portal page, all roles | No errors |
+| Lint / build | Clean |
 
 ## Session of 2026-11-18: revision 4 (QR camera, backup, Render)
 
@@ -248,5 +283,5 @@ Manage Rooms, no extra floors, no Near window).
 
 ## Possible next steps (not started)
 
-- Commit the revisions.
-- Deploy to Render by following `docs/RENDER_DEPLOYMENT_GUIDE.md`.
+- Commit and push revision 5, then check the Render deploy logs.
+- Collect students' real IDs and apply them with `update_student_ids`.

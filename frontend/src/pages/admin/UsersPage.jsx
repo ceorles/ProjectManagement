@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { KeyRound, Pencil, UserCheck, UserPlus, UserX, Users } from 'lucide-react'
+import { KeyRound, Pencil, RotateCcw, UserCheck, UserPlus, UserX, Users } from 'lucide-react'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import ConfirmDialog from '../../components/common/ConfirmDialog'
@@ -9,6 +9,9 @@ import {
   Checkbox, FormError, PasswordField, SearchInput, SelectField, TextField,
 } from '../../components/common/FormControls'
 import Modal from '../../components/common/Modal'
+import {
+  MobileNumberField, NameField, ProgramField, StudentIdField, YearLevelField,
+} from '../../components/common/StudentFields'
 import PageHeader from '../../components/common/PageHeader'
 import Pagination from '../../components/common/Pagination'
 import Tabs from '../../components/common/Tabs'
@@ -22,6 +25,7 @@ import { userService } from '../../services'
 import { ROLES } from '../../utils/constants'
 import { formatTimestamp } from '../../utils/datetime'
 import { fieldError } from '../../utils/errors'
+import { formatName } from '../../utils/studentInfo'
 
 const ROLE_TABS = [
   { value: '', label: 'Everyone' },
@@ -29,6 +33,13 @@ const ROLE_TABS = [
   { value: 'librarian', label: 'Librarians' },
   { value: 'assistant', label: 'Assistants' },
   { value: 'admin', label: 'Admins' },
+]
+const SORTS = [
+  { value: '', label: 'Sort: last name A-Z' },
+  { value: '-last_login', label: 'Recently signed in' },
+  { value: '-date_joined', label: 'Recently added' },
+  { value: 'name', label: 'Name A-Z' },
+  { value: '-name', label: 'Name Z-A' },
 ]
 const ROLE_TONE = { admin: 'blue', librarian: 'yellow', assistant: 'green', student: 'gray' }
 const EMPTY = {
@@ -57,7 +68,12 @@ function UserFormModal({ account, defaultRole, onClose, onSaved }) {
 
   const [save, saving] = useAction(
     () => {
-      const data = { ...values, year_level: values.year_level ? Number(values.year_level) : null }
+      const data = {
+        ...values,
+        first_name: formatName(values.first_name),
+        last_name: formatName(values.last_name),
+        year_level: values.year_level ? Number(values.year_level) : null,
+      }
       return editing ? userService.update(account.id, data) : userService.create({ ...data, password })
     },
     {
@@ -98,18 +114,16 @@ function UserFormModal({ account, defaultRole, onClose, onSaved }) {
           <option value="student">Student - requests seats, tables and computers</option>
           <option value="admin">Admin - full access</option>
         </SelectField>
-        <TextField label="First name" required {...bind('first_name')} />
-        <TextField label="Last name" required {...bind('last_name')} />
+        <NameField label="First name" required {...bind('first_name')} />
+        <NameField label="Last name" required {...bind('last_name')} />
         <TextField label="Email address" type="email" required autoComplete="off" {...bind('email')} />
-        <TextField label="Mobile number" type="tel" {...bind('phone')} />
+        <MobileNumberField label="Mobile number" {...bind('phone')} />
         {isStudent && (
           <>
-            <TextField label="Student ID" required={values.role === 'student'} {...bind('student_id')} />
-            <SelectField label="Year level" {...bind('year_level')}>
-              <option value="">Not set</option>
-              {[1, 2, 3, 4, 5, 6].map((year) => <option key={year} value={year}>Year {year}</option>)}
-            </SelectField>
-            <TextField label="Program / course" className="span-2" {...bind('program')} />
+            <StudentIdField label="Student ID" required={values.role === 'student'}
+              hint="As printed on the student's school ID. The hyphen is added for you." {...bind('student_id')} />
+            <YearLevelField emptyLabel="Not set" {...bind('year_level')} />
+            <ProgramField className="span-2" emptyLabel="Not set" {...bind('program')} />
           </>
         )}
         {values.role === 'librarian' && (
@@ -168,15 +182,21 @@ export default function UsersPage() {
   const { timeZone } = useLibrary()
   const [role, setRole] = useState('')
   const [status, setStatus] = useState('')
+  const [signedIn, setSignedIn] = useState('')
+  const [ordering, setOrdering] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [dialog, setDialog] = useState(null) // { type, account? }
   const term = useDebounce(search.trim())
 
   const query = useApiQuery(
-    () => userService.list({ role, status, search: term, page }),
-    [role, status, term, page], { keepPrevious: true },
+    () => userService.list({ role, status, signed_in: signedIn, ordering, search: term, page }),
+    [role, status, signedIn, ordering, term, page], { keepPrevious: true },
   )
+  const filtered = Boolean(role || status || signedIn || ordering || search)
+  const resetFilters = () => {
+    setRole(''); setStatus(''); setSignedIn(''); setOrdering(''); setSearch(''); setPage(1)
+  }
   const close = () => setDialog(null)
   const reload = () => { close(); query.refetch() }
   const change = (setter) => (value) => { setter(value); setPage(1) }
@@ -262,11 +282,24 @@ export default function UsersPage() {
             <option value="active">Active only</option>
             <option value="inactive">Deactivated only</option>
           </select>
+          <select className="input select" aria-label="Sign-in activity" value={signedIn}
+            onChange={(event) => change(setSignedIn)(event.target.value)}>
+            <option value="">Any sign-in activity</option>
+            <option value="never">Never signed in</option>
+          </select>
+          <select className="input select" aria-label="Sort accounts" value={ordering}
+            onChange={(event) => change(setOrdering)(event.target.value)}>
+            {SORTS.map((sort) => <option key={sort.value} value={sort.value}>{sort.label}</option>)}
+          </select>
+          {filtered && (
+            <Button variant="ghost" icon={RotateCcw} onClick={resetFilters}>Reset filters</Button>
+          )}
         </div>
         <QueryBoundary query={query} loadingLabel="Loading accounts...">
           {(data) => (data.results.length === 0 ? (
             <EmptyState icon={Users} title="No accounts match"
-              description="Try a different role, status or search term." />
+              description="Try a different role, status, sign-in activity or search term."
+              action={filtered && <Button variant="secondary" icon={RotateCcw} onClick={resetFilters}>Reset filters</Button>} />
           ) : (
             <>
               <DataTable columns={columns} rows={data.results} caption="User accounts" />

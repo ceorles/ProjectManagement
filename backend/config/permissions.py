@@ -25,8 +25,8 @@ class IsLibraryStaff(BasePermission):
 class IsReservationManager(BasePermission):
     """
     Admins and librarians: the people who decide on reservations (approve,
-    reject, record a no-show) and see the usage reports. Student Assistants
-    are deliberately not included.
+    reject, record a no-show). Student Assistants are deliberately not
+    included. Reports are for Admins only (IsAdmin).
     """
 
     message = 'Only a librarian can perform this action.'

@@ -1,6 +1,6 @@
 """Account management for Admins, plus student search/lookup."""
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -50,6 +50,9 @@ class UserViewSet(
         elif status_filter == 'inactive':
             queryset = queryset.filter(is_active=False)
 
+        if params.get('signed_in') == 'never':
+            queryset = queryset.filter(last_login__isnull=True)
+
         search = params.get('search', '').strip()
         if search:
             queryset = queryset.filter(
@@ -60,9 +63,20 @@ class UserViewSet(
             )
 
         ordering = params.get('ordering')
-        allowed = {'last_name', '-last_name', 'date_joined', '-date_joined', 'email', '-email'}
-        if ordering in allowed:
-            queryset = queryset.order_by(ordering, 'id')
+        orderings = {
+            # Most recent sign-in first; accounts that never signed in go last.
+            '-last_login': [F('last_login').desc(nulls_last=True)],
+            '-date_joined': ['-date_joined'],
+            'date_joined': ['date_joined'],
+            'name': ['first_name', 'last_name'],
+            '-name': ['-first_name', '-last_name'],
+            'last_name': ['last_name', 'first_name'],
+            '-last_name': ['-last_name', '-first_name'],
+            'email': ['email'],
+            '-email': ['-email'],
+        }
+        if ordering in orderings:
+            queryset = queryset.order_by(*orderings[ordering], 'id')
         return queryset
 
     def perform_create(self, serializer):

@@ -9,7 +9,7 @@ import LandingPage from './pages/landing/LandingPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import NotFoundPage from './pages/shared/NotFoundPage'
 import {
-  canManageReservations, canManageResources, isAdmin, isStaff, isStudent,
+  canManageResources, isAdmin, isStaff, isStudent,
 } from './utils/roles'
 
 // Pages behind the login are loaded on demand, which keeps the first load
@@ -61,8 +61,8 @@ export default function App() {
                 <Route path="/manage/reservations" element={<ManageReservationsPage />} />
               </Route>
 
-              {/* Librarians and admins only */}
-              <Route element={<RequireRole allow={canManageReservations} />}>
+              {/* Admins only */}
+              <Route element={<RequireRole allow={isAdmin} />}>
                 <Route path="/reports" element={<ReportsPage />} />
               </Route>
 

@@ -343,7 +343,7 @@ class StudentAssistantTests(PortalTestCase):
     def test_public_registration_cannot_create_an_assistant(self):
         response = self.client.post('/api/auth/register/', {
             'email': 'sneak@test.edu', 'first_name': 'Sne', 'last_name': 'Aky',
-            'student_id': '2025-0900', 'password': PASSWORD, 'confirm_password': PASSWORD,
+            'student_id': '022A-00900', 'password': PASSWORD, 'confirm_password': PASSWORD,
             'role': 'assistant',
         })
         self.assertEqual(response.status_code, 201)
@@ -353,12 +353,12 @@ class StudentAssistantTests(PortalTestCase):
         self.login_as(self.admin)
         response = self.client.post('/api/users/', {
             'email': 'helper@test.edu', 'first_name': 'Hel', 'last_name': 'Per',
-            'role': 'assistant', 'student_id': '2023-0777', 'password': PASSWORD,
+            'role': 'assistant', 'student_id': '021A-00777', 'password': PASSWORD,
         })
         self.assertEqual(response.status_code, 201, response.data)
         helper = User.objects.get(email='helper@test.edu')
         self.assertEqual(helper.role, User.Role.ASSISTANT)
-        self.assertEqual(helper.student_id, '2023-0777')
+        self.assertEqual(helper.student_id, '021A-00777')
         self.assertFalse(helper.can_manage_resources)
         self.login_as(self.librarian)
         self.assertEqual(self.client.post('/api/users/', {}).status_code, 403)

@@ -3,7 +3,10 @@ import { Download, KeyRound, LogOut, Smartphone, UserRound } from 'lucide-react'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
-import { FormError, PasswordField, SelectField, TextField } from '../../components/common/FormControls'
+import { FormError, PasswordField, TextField } from '../../components/common/FormControls'
+import {
+  MobileNumberField, NameField, ProgramField, YearLevelField,
+} from '../../components/common/StudentFields'
 import PageHeader from '../../components/common/PageHeader'
 import { useAction } from '../../hooks/useAction'
 import { useAuth } from '../../hooks/useAuth'
@@ -51,19 +54,16 @@ function ProfileForm() {
       <form className="form-grid" onSubmit={(event) => { event.preventDefault(); setError(null); save() }}>
         {restored && changed && <p className="notice span-2">You have unsaved changes from earlier.</p>}
         <FormError className="span-2" error={error?.fields ? null : error} />
-        <TextField label="First name" required autoComplete="given-name" {...bind('first_name')} />
-        <TextField label="Last name" required autoComplete="family-name" {...bind('last_name')} />
+        <NameField label="First name" required autoComplete="given-name" {...bind('first_name')} />
+        <NameField label="Last name" required autoComplete="family-name" {...bind('last_name')} />
         <TextField label="Email address" value={user.email} disabled readOnly
           hint="Contact the library to change your email." />
-        <TextField label="Mobile number" type="tel" autoComplete="tel" {...bind('phone')} />
+        <MobileNumberField label="Mobile number" {...bind('phone')} />
         {(user.role === 'student' || user.role === 'assistant') && (
           <>
             <TextField label="Student ID" value={user.student_id || ''} disabled readOnly />
-            <SelectField label="Year level" {...bind('year_level')}>
-              <option value="">Not set</option>
-              {[1, 2, 3, 4, 5, 6].map((year) => <option key={year} value={year}>Year {year}</option>)}
-            </SelectField>
-            <TextField label="Program / course" className="span-2" {...bind('program')} />
+            <YearLevelField emptyLabel="Not set" {...bind('year_level')} />
+            <ProgramField className="span-2" emptyLabel="Not set" {...bind('program')} />
           </>
         )}
         <div className="form-actions span-2">

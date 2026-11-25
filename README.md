@@ -513,6 +513,20 @@ are described in `render.yaml`.
 | Back up the database to `backup.json` | `python manage.py create_backup` |
 | Restore it into a new, migrated database (once) | `python manage.py restore_backup backup.json` |
 
+### Moving students to their school-issued IDs (023A-12345)
+
+New accounts must use the school format. Older accounts keep their old ID, and
+can still sign in, until it is replaced with the real one. No ID is ever invented.
+
+| Step | `backend` command |
+|---|---|
+| Write a template of accounts with an old-style ID | `python manage.py update_student_ids --export student-ids.csv` |
+| Type each real ID in `new_student_id`, then check the file (saves nothing) | `python manage.py update_student_ids --apply student-ids.csv` |
+| Save, all or nothing | `python manage.py update_student_ids --apply student-ids.csv --commit` |
+
+An Admin can also change one student's ID in **Users > Edit**. Accepted ID
+prefixes are listed in `backend/users/student_info.py` (`STUDENT_ID_PREFIXES`).
+
 `backup.json` holds personal data and is ignored by git. Uploaded photos are not
 inside it: back up `backend/media/` separately.
 
